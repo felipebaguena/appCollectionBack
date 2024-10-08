@@ -1,4 +1,5 @@
-import { Entity, Column, PrimaryGeneratedColumn } from 'typeorm';
+import { Entity, Column, PrimaryGeneratedColumn, OneToMany } from 'typeorm';
+import { Image } from '../images/image.entity';
 
 @Entity()
 export class Game {
@@ -16,4 +17,10 @@ export class Game {
 
   @Column('text')
   description: string;
+
+  @Column({ nullable: true })
+  coverId: number;
+
+  @OneToMany(() => Image, image => image.game)
+  images: Image[];
 }

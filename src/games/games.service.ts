@@ -31,4 +31,17 @@ export class GamesService {
   async remove(id: number): Promise<void> {
     await this.gamesRepository.delete(id);
   }
+
+  async findOneWithImages(id: number): Promise<Game> {
+    return this.gamesRepository.findOne({
+      where: { id },
+      relations: ['images'],
+    });
+  }
+
+  async setCover(gameId: number, imageId: number): Promise<Game> {
+    const game = await this.gamesRepository.findOne({ where: { id: gameId } });
+    game.coverId = imageId;
+    return this.gamesRepository.save(game);
+  }
 }

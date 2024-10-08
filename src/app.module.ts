@@ -11,6 +11,10 @@ import { User } from './users/user.entity';
 import { Game } from './games/game.entity';
 import { Role } from './roles/role.entity';
 import { RolesModule } from './roles/roles.module';
+import { ImagesModule } from './images/images.module';
+import { Image } from './images/image.entity';
+import { ServeStaticModule } from '@nestjs/serve-static';
+import { join } from 'path';
 
 @Module({
   imports: [
@@ -24,13 +28,18 @@ import { RolesModule } from './roles/roles.module';
       username: 'root',
       password: 'elculodealyna',
       database: 'nest_ddbb',
-      entities: [User, Role, Game],
+      entities: [User, Role, Game, Image],
       synchronize: true,
     }),
     AuthModule,
     UsersModule,
     GamesModule,
-    RolesModule
+    RolesModule,
+    ImagesModule,
+    ServeStaticModule.forRoot({
+      rootPath: join(__dirname, '..', 'uploads'),
+      serveRoot: '/uploads',
+    }),
   ],
   controllers: [AppController, UsersnestController],
   providers: [AppService],

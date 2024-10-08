@@ -41,6 +41,8 @@ describe('GamesService', () => {
         platform: game.platform,
         releaseYear: game.releaseYear,
         description: game.description,
+        images: [],
+        coverId: null,
       };
       jest.spyOn(repo, 'create').mockReturnValue(gameEntity);
       jest.spyOn(repo, 'save').mockResolvedValue(gameEntity);
