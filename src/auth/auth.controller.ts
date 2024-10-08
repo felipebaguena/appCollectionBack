@@ -11,6 +11,7 @@ export class AuthController {
     if (!user) {
       throw new UnauthorizedException();
     }
+    console.log('User before login:', user);
     return this.authService.login(user);
   }
 }
