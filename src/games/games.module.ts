@@ -3,13 +3,14 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { GamesService } from './games.service';
 import { GamesController } from './games.controller';
 import { Game } from './game.entity';
+import { Image } from '../images/image.entity';  // Asegúrate de que la ruta sea correcta
 import { JwtModule } from '@nestjs/jwt';
 import { RolesGuard } from '../guards/roles.guard';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([Game]),
+    TypeOrmModule.forFeature([Game, Image]),
     JwtModule.registerAsync({
       imports: [ConfigModule],
       useFactory: async (configService: ConfigService) => ({

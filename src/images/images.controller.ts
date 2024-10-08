@@ -76,4 +76,9 @@ export class ImagesController {
   async setCover(@Param('id') id: string, @Body('gameId') gameId: number) {
     return this.imagesService.setCover(gameId, +id);
   }
+
+  @Get('game/:gameId')
+  async findByGameId(@Param('gameId') gameId: string) {
+    return this.imagesService.findByGameId(+gameId);
+  }
 }

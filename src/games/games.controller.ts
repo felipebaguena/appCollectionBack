@@ -6,11 +6,11 @@ import { RolesGuard } from '../guards/roles.guard';
 import { Roles } from '../guards/roles.decorator';
 
 @Controller('games')
-@UseGuards(AuthGuard('jwt'), RolesGuard)
 export class GamesController {
   constructor(private readonly gamesService: GamesService) {}
 
   @Post()
+  @UseGuards(AuthGuard('jwt'), RolesGuard)
   @Roles('SUPERUSER')
   create(@Body() game: Partial<Game>) {
     return this.gamesService.create(game);
@@ -18,21 +18,23 @@ export class GamesController {
 
   @Get()
   findAll() {
-    return this.gamesService.findAll();
+    return this.gamesService.findAllWithImages();
   }
 
   @Get(':id')
   findOne(@Param('id') id: string) {
-    return this.gamesService.findOne(+id);
+    return this.gamesService.findOneWithImages(+id);
   }
 
   @Put(':id')
+  @UseGuards(AuthGuard('jwt'), RolesGuard)
   @Roles('SUPERUSER')
   update(@Param('id') id: string, @Body() game: Partial<Game>) {
     return this.gamesService.update(+id, game);
   }
 
   @Delete(':id')
+  @UseGuards(AuthGuard('jwt'), RolesGuard)
   @Roles('SUPERUSER')
   remove(@Param('id') id: string) {
     return this.gamesService.remove(+id);
@@ -44,6 +46,7 @@ export class GamesController {
   }
 
   @Put(':id/setCover')
+  @UseGuards(AuthGuard('jwt'), RolesGuard)
   @Roles('SUPERUSER')
   async setCover(@Param('id') id: string, @Body('imageId') imageId: number) {
     return this.gamesService.setCover(+id, imageId);
