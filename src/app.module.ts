@@ -30,6 +30,8 @@ import { join } from 'path';
       database: 'nest_ddbb',
       entities: [User, Role, Game, Image],
       synchronize: true,
+      logging: true,
+      logger: 'advanced-console',
     }),
     AuthModule,
     UsersModule,

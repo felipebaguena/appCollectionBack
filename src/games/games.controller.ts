@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, Put, Param, Delete, UseGuards } from '@nestjs/common';
+import { Controller, Get, Post, Body, Put, Param, Delete, UseGuards, Logger, Query, ParseIntPipe } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
 import { GamesService } from './games.service';
 import { Game } from './game.entity';
@@ -7,6 +7,8 @@ import { Roles } from '../guards/roles.decorator';
 
 @Controller('games')
 export class GamesController {
+  private readonly logger = new Logger(GamesController.name);
+
   constructor(private readonly gamesService: GamesService) {}
 
   @Post()
@@ -19,6 +21,11 @@ export class GamesController {
   @Get()
   findAll() {
     return this.gamesService.findAllWithImages();
+  }
+
+  @Get('home')
+  async getHomeGames(@Query('limit', new ParseIntPipe({ optional: true })) limit?: number) {
+    return this.gamesService.getHomeGames(limit);
   }
 
   @Get(':id')
@@ -51,4 +58,5 @@ export class GamesController {
   async setCover(@Param('id') id: string, @Body('imageId') imageId: number) {
     return this.gamesService.setCover(+id, imageId);
   }
+
 }

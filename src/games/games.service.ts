@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Game } from './game.entity';
@@ -6,6 +6,8 @@ import { Image } from '../images/image.entity';
 
 @Injectable()
 export class GamesService {
+  private readonly logger = new Logger(GamesService.name);
+
   constructor(
     @InjectRepository(Game)
     private gamesRepository: Repository<Game>,
@@ -67,5 +69,16 @@ export class GamesService {
     return this.gamesRepository.find({
       relations: ['images'],
     });
+  }
+
+  async getHomeGames(limit: number = 9): Promise<Game[]> {
+    const games = await this.gamesRepository
+      .createQueryBuilder('game')
+      .leftJoinAndSelect('game.images', 'image')
+      .orderBy('RAND()')
+      .take(limit)
+      .getMany();
+
+    return games;
   }
 }
