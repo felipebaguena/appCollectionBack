@@ -1,7 +1,13 @@
-import { Entity, Column, PrimaryGeneratedColumn, ManyToOne, JoinColumn } from 'typeorm';
+import {
+  Entity,
+  PrimaryGeneratedColumn,
+  Column,
+  ManyToOne,
+  JoinColumn,
+} from 'typeorm';
 import { Game } from '../games/game.entity';
 
-@Entity('image')
+@Entity()
 export class Image {
   @PrimaryGeneratedColumn()
   id: number;
@@ -12,13 +18,13 @@ export class Image {
   @Column()
   path: string;
 
-  @Column({ name: 'is_cover' })
+  @Column({ name: 'is_cover', default: false })
   isCover: boolean;
 
-  @Column({ name: 'game_id' })
+  @Column({ name: 'game_id', nullable: true })
   gameId: number;
 
-  @ManyToOne(() => Game, game => game.images)
+  @ManyToOne(() => Game, (game) => game.images)
   @JoinColumn({ name: 'game_id' })
   game: Game;
 }
