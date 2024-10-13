@@ -1,7 +1,15 @@
-import { Entity, Column, PrimaryGeneratedColumn, OneToMany } from 'typeorm';
+import {
+  Entity,
+  Column,
+  PrimaryGeneratedColumn,
+  OneToMany,
+  ManyToMany,
+  JoinTable,
+} from 'typeorm';
 import { Image } from '../images/image.entity';
+import { Platform } from '../platforms/platform.entity';
 
-@Entity('game')
+@Entity()
 export class Game {
   @PrimaryGeneratedColumn()
   id: number;
@@ -9,8 +17,9 @@ export class Game {
   @Column()
   title: string;
 
-  @Column()
-  platform: string;
+  @ManyToMany(() => Platform)
+  @JoinTable()
+  platforms: Platform[];
 
   @Column({ name: 'release_year' })
   releaseYear: number;

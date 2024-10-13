@@ -3,19 +3,20 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { GamesService } from './games.service';
 import { GamesController } from './games.controller';
 import { Game } from './game.entity';
-import { Image } from '../images/image.entity';  // Asegúrate de que la ruta sea correcta
+import { Image } from '../images/image.entity'; // Asegúrate de que la ruta sea correcta
+import { Platform } from '../platforms/platform.entity';
 import { JwtModule } from '@nestjs/jwt';
 import { RolesGuard } from '../guards/roles.guard';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([Game, Image]),
+    TypeOrmModule.forFeature([Game, Image, Platform]),
     JwtModule.registerAsync({
       imports: [ConfigModule],
       useFactory: async (configService: ConfigService) => ({
         secret: configService.get<string>('JWT_SECRET'),
-        signOptions: { 
+        signOptions: {
           expiresIn: configService.get<string>('JWT_EXPIRATION') || '1h',
         },
       }),

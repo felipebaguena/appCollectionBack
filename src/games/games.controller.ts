@@ -1,4 +1,16 @@
-import { Controller, Get, Post, Body, Put, Param, Delete, UseGuards, Logger, Query, ParseIntPipe } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Body,
+  Put,
+  Param,
+  Delete,
+  UseGuards,
+  Logger,
+  Query,
+  ParseIntPipe,
+} from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
 import { GamesService } from './games.service';
 import { Game } from './game.entity';
@@ -14,7 +26,7 @@ export class GamesController {
   @Post()
   @UseGuards(AuthGuard('jwt'), RolesGuard)
   @Roles('SUPERUSER')
-  create(@Body() game: Partial<Game>) {
+  create(@Body() game: Partial<Game> & { platforms?: number[] }) {
     return this.gamesService.create(game);
   }
 
@@ -24,7 +36,9 @@ export class GamesController {
   }
 
   @Get('home')
-  async getHomeGames(@Query('limit', new ParseIntPipe({ optional: true })) limit?: number) {
+  async getHomeGames(
+    @Query('limit', new ParseIntPipe({ optional: true })) limit?: number,
+  ) {
     return this.gamesService.getHomeGames(limit);
   }
 
@@ -36,8 +50,11 @@ export class GamesController {
   @Put(':id')
   @UseGuards(AuthGuard('jwt'), RolesGuard)
   @Roles('SUPERUSER')
-  update(@Param('id') id: string, @Body() game: Partial<Game>) {
-    return this.gamesService.update(+id, game);
+  update(
+    @Param('id') id: string,
+    @Body() gameData: Partial<Game> & { platforms?: number[] },
+  ) {
+    return this.gamesService.update(+id, gameData);
   }
 
   @Delete(':id')
@@ -58,5 +75,4 @@ export class GamesController {
   async setCover(@Param('id') id: string, @Body('imageId') imageId: number) {
     return this.gamesService.setCover(+id, imageId);
   }
-
 }
