@@ -131,11 +131,12 @@ export class GamesService {
     });
   }
 
-  async getHomeGames(limit: number = 9): Promise<Game[]> {
+  async getHomeGames(limit: number = 6): Promise<Game[]> {
     const games = await this.gamesRepository
       .createQueryBuilder('game')
       .leftJoinAndSelect('game.images', 'image')
       .leftJoinAndSelect('game.platforms', 'platform')
+      .where('game.coverId IS NOT NULL')
       .orderBy('RAND()')
       .take(limit)
       .getMany();
