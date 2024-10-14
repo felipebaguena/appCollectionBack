@@ -4,6 +4,7 @@ import { Repository, In } from 'typeorm';
 import { Game } from './game.entity';
 import { Image } from '../images/image.entity';
 import { Platform } from '../platforms/platform.entity';
+import { Genre } from '../genres/genre.entity';
 
 @Injectable()
 export class GamesService {
@@ -16,10 +17,14 @@ export class GamesService {
     private imagesRepository: Repository<Image>,
     @InjectRepository(Platform)
     private platformRepository: Repository<Platform>,
+    @InjectRepository(Genre)
+    private genreRepository: Repository<Genre>,
   ) {}
 
-  async create(game: Partial<Game>): Promise<Game> {
-    const { platforms, ...gameData } = game;
+  async create(
+    game: Partial<Game> & { platforms?: number[]; genres?: number[] },
+  ): Promise<Game> {
+    const { platforms, genres, ...gameData } = game;
 
     // Crea una nueva instancia del juego con los datos proporcionados
     let newGame = this.gamesRepository.create(gameData);
@@ -40,18 +45,36 @@ export class GamesService {
       newGame.platforms = foundPlatforms;
     }
 
+    // Verifica si se han proporcionado géneros
+    if (genres && genres.length > 0) {
+      // Busca los géneros en la base de datos usando los IDs proporcionados
+      const foundGenres = await this.genreRepository.find({
+        where: { id: In(genres) },
+      });
+
+      // Verifica si todos los géneros solicitados fueron encontrados
+      if (foundGenres.length !== genres.length) {
+        throw new NotFoundException('Uno o más géneros no encontrados');
+      }
+
+      // Asigna los géneros encontrados al nuevo juego
+      newGame.genres = foundGenres;
+    }
+
     // Guarda el nuevo juego en la base de datos
     return this.gamesRepository.save(newGame);
   }
 
-  findAll(): Promise<Game[]> {
-    return this.gamesRepository.find({ relations: ['platforms', 'images'] });
+  async findAll(): Promise<Game[]> {
+    return this.gamesRepository.find({
+      relations: ['platforms', 'images', 'genres'],
+    });
   }
 
   async findOne(id: number): Promise<Game> {
     const game = await this.gamesRepository.findOne({
       where: { id },
-      relations: ['platforms', 'images'],
+      relations: ['platforms', 'images', 'genres'],
     });
     if (!game) {
       throw new NotFoundException(`Game with ID ${id} not found`);
@@ -61,11 +84,11 @@ export class GamesService {
 
   async update(
     id: number,
-    gameData: Partial<Game> & { platforms?: number[] },
+    gameData: Partial<Game> & { platforms?: number[]; genres?: number[] },
   ): Promise<Game> {
     const game = await this.gamesRepository.findOne({
       where: { id },
-      relations: ['platforms', 'images'],
+      relations: ['platforms', 'genres', 'images'],
     });
 
     if (!game) {
@@ -83,8 +106,19 @@ export class GamesService {
       game.platforms = platforms;
     }
 
+    // Si se proporcionan IDs de género, actualízalos
+    if (gameData.genres && Array.isArray(gameData.genres)) {
+      const genres = await this.genreRepository.findBy({
+        id: In(gameData.genres),
+      });
+      if (genres.length !== gameData.genres.length) {
+        throw new NotFoundException('Uno o más géneros no encontrados');
+      }
+      game.genres = genres;
+    }
+
     // Actualiza otros campos
-    const { platforms, ...otherData } = gameData;
+    const { platforms, genres, ...otherData } = gameData;
     Object.assign(game, otherData);
 
     // Guarda los cambios
@@ -98,11 +132,11 @@ export class GamesService {
   async findOneWithImages(id: number): Promise<Game> {
     const game = await this.gamesRepository.findOne({
       where: { id },
-      relations: ['images'],
+      relations: ['images', 'platforms', 'genres'],
     });
 
     if (!game) {
-      throw new Error('Juego no encontrado');
+      throw new NotFoundException('Juego no encontrado');
     }
 
     return game;
@@ -127,7 +161,7 @@ export class GamesService {
 
   async findAllWithImages(): Promise<Game[]> {
     return this.gamesRepository.find({
-      relations: ['images', 'platforms'],
+      relations: ['images', 'platforms', 'genres'],
     });
   }
 
@@ -136,6 +170,7 @@ export class GamesService {
       .createQueryBuilder('game')
       .leftJoinAndSelect('game.images', 'image')
       .leftJoinAndSelect('game.platforms', 'platform')
+      .leftJoinAndSelect('game.genres', 'genre')
       .where('game.coverId IS NOT NULL')
       .orderBy('RAND()')
       .take(limit)

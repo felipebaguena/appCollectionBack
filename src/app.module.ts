@@ -17,6 +17,8 @@ import { ServeStaticModule } from '@nestjs/serve-static';
 import { join } from 'path';
 import { Platform } from './platforms/platform.entity';
 import { PlatformsModule } from './platforms/platforms.module';
+import { Genre } from './genres/genre.entity';
+import { GenresModule } from './genres/genres.module';
 
 @Module({
   imports: [
@@ -30,7 +32,7 @@ import { PlatformsModule } from './platforms/platforms.module';
       username: 'root',
       password: 'elculodealyna',
       database: 'nest_ddbb',
-      entities: [User, Role, Game, Image, Platform],
+      entities: [User, Role, Game, Image, Platform, Genre],
       synchronize: true,
       logging: true,
       logger: 'advanced-console',
@@ -41,6 +43,7 @@ import { PlatformsModule } from './platforms/platforms.module';
     RolesModule,
     ImagesModule,
     PlatformsModule,
+    GenresModule,
     ServeStaticModule.forRoot({
       rootPath: join(__dirname, '..', 'uploads'),
       serveRoot: '/uploads',

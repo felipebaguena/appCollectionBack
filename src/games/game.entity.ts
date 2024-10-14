@@ -8,6 +8,7 @@ import {
 } from 'typeorm';
 import { Image } from '../images/image.entity';
 import { Platform } from '../platforms/platform.entity';
+import { Genre } from '../genres/genre.entity';
 
 @Entity()
 export class Game {
@@ -20,6 +21,10 @@ export class Game {
   @ManyToMany(() => Platform)
   @JoinTable()
   platforms: Platform[];
+
+  @ManyToMany(() => Genre, (genre) => genre.games)
+  @JoinTable()
+  genres: Genre[];
 
   @Column({ name: 'release_year' })
   releaseYear: number;
