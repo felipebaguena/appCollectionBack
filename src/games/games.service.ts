@@ -217,4 +217,34 @@ export class GamesService {
 
     return games;
   }
+
+  async getGamesForDataTable(dataTableOptions: {
+    page: number;
+    limit: number;
+    sortField?: string;
+    sortOrder?: 'ASC' | 'DESC';
+  }): Promise<{ data: Game[]; total: number; totalPages: number }> {
+    const { page, limit, sortField, sortOrder } = dataTableOptions;
+    const skip = (page - 1) * limit;
+
+    const queryBuilder = this.gamesRepository
+      .createQueryBuilder('game')
+      .leftJoinAndSelect('game.platforms', 'platform')
+      .leftJoinAndSelect('game.genres', 'genre')
+      .leftJoinAndSelect('game.developers', 'developer')
+      .leftJoinAndSelect('game.images', 'image');
+
+    if (sortField && sortOrder) {
+      queryBuilder.orderBy(`game.${sortField}`, sortOrder);
+    }
+
+    const [games, total] = await queryBuilder
+      .skip(skip)
+      .take(limit)
+      .getManyAndCount();
+
+    const totalPages = Math.ceil(total / limit);
+
+    return { data: games, total, totalPages };
+  }
 }

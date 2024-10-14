@@ -87,4 +87,20 @@ export class GamesController {
   async setCover(@Param('id') id: string, @Body('imageId') imageId: number) {
     return this.gamesService.setCover(+id, imageId);
   }
+
+  @Post('datatable')
+  async getGamesForDataTable(
+    @Body()
+    body: {
+      dataTable: {
+        page: number;
+        limit: number;
+        sortField?: string;
+        sortOrder?: 'ASC' | 'DESC';
+      };
+    },
+  ) {
+    const { dataTable } = body;
+    return this.gamesService.getGamesForDataTable(dataTable);
+  }
 }
