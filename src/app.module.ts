@@ -19,6 +19,8 @@ import { Platform } from './platforms/platform.entity';
 import { PlatformsModule } from './platforms/platforms.module';
 import { Genre } from './genres/genre.entity';
 import { GenresModule } from './genres/genres.module';
+import { Developer } from './developers/developer.entity';
+import { DevelopersModule } from './developers/developers.module';
 
 @Module({
   imports: [
@@ -32,7 +34,7 @@ import { GenresModule } from './genres/genres.module';
       username: 'root',
       password: 'elculodealyna',
       database: 'nest_ddbb',
-      entities: [User, Role, Game, Image, Platform, Genre],
+      entities: [User, Role, Game, Image, Platform, Genre, Developer],
       synchronize: true,
       logging: true,
       logger: 'advanced-console',
@@ -44,6 +46,7 @@ import { GenresModule } from './genres/genres.module';
     ImagesModule,
     PlatformsModule,
     GenresModule,
+    DevelopersModule,
     ServeStaticModule.forRoot({
       rootPath: join(__dirname, '..', 'uploads'),
       serveRoot: '/uploads',

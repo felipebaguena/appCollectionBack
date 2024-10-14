@@ -27,7 +27,12 @@ export class GamesController {
   @UseGuards(AuthGuard('jwt'), RolesGuard)
   @Roles('SUPERUSER')
   create(
-    @Body() game: Partial<Game> & { platforms?: number[]; genres?: number[] },
+    @Body()
+    game: Partial<Game> & {
+      platforms?: number[];
+      genres?: number[];
+      developers?: number[];
+    },
   ) {
     return this.gamesService.create(game);
   }
@@ -55,7 +60,11 @@ export class GamesController {
   update(
     @Param('id') id: string,
     @Body()
-    gameData: Partial<Game> & { platforms?: number[]; genres?: number[] },
+    gameData: Partial<Game> & {
+      platforms?: number[];
+      genres?: number[];
+      developers?: number[];
+    },
   ) {
     return this.gamesService.update(+id, gameData);
   }

@@ -6,13 +6,14 @@ import { Game } from './game.entity';
 import { Image } from '../images/image.entity';
 import { Platform } from '../platforms/platform.entity';
 import { Genre } from '../genres/genre.entity';
+import { Developer } from '../developers/developer.entity';
 import { JwtModule } from '@nestjs/jwt';
 import { RolesGuard } from '../guards/roles.guard';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([Game, Image, Platform, Genre]),
+    TypeOrmModule.forFeature([Game, Image, Platform, Genre, Developer]),
     JwtModule.registerAsync({
       imports: [ConfigModule],
       useFactory: async (configService: ConfigService) => ({
@@ -24,7 +25,7 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
       inject: [ConfigService],
     }),
   ],
-  providers: [GamesService, RolesGuard],
   controllers: [GamesController],
+  providers: [GamesService, RolesGuard],
 })
 export class GamesModule {}

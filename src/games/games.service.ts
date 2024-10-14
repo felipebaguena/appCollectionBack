@@ -5,6 +5,7 @@ import { Game } from './game.entity';
 import { Image } from '../images/image.entity';
 import { Platform } from '../platforms/platform.entity';
 import { Genre } from '../genres/genre.entity';
+import { Developer } from '../developers/developer.entity';
 
 @Injectable()
 export class GamesService {
@@ -19,12 +20,18 @@ export class GamesService {
     private platformRepository: Repository<Platform>,
     @InjectRepository(Genre)
     private genreRepository: Repository<Genre>,
+    @InjectRepository(Developer)
+    private developerRepository: Repository<Developer>,
   ) {}
 
   async create(
-    game: Partial<Game> & { platforms?: number[]; genres?: number[] },
+    game: Partial<Game> & {
+      platforms?: number[];
+      genres?: number[];
+      developers?: number[];
+    },
   ): Promise<Game> {
-    const { platforms, genres, ...gameData } = game;
+    const { platforms, genres, developers, ...gameData } = game;
 
     // Crea una nueva instancia del juego con los datos proporcionados
     let newGame = this.gamesRepository.create(gameData);
@@ -61,20 +68,36 @@ export class GamesService {
       newGame.genres = foundGenres;
     }
 
+    // Verifica si se han proporcionado desarrolladores
+    if (developers && developers.length > 0) {
+      // Busca los desarrolladores en la base de datos usando los IDs proporcionados
+      const foundDevelopers = await this.developerRepository.find({
+        where: { id: In(developers) },
+      });
+
+      // Verifica si todos los desarrolladores solicitados fueron encontrados
+      if (foundDevelopers.length !== developers.length) {
+        throw new NotFoundException('Uno o más desarrolladores no encontrados');
+      }
+
+      // Asigna los desarrolladores encontrados al nuevo juego
+      newGame.developers = foundDevelopers;
+    }
+
     // Guarda el nuevo juego en la base de datos
     return this.gamesRepository.save(newGame);
   }
 
   async findAll(): Promise<Game[]> {
     return this.gamesRepository.find({
-      relations: ['platforms', 'images', 'genres'],
+      relations: ['platforms', 'images', 'genres', 'developers'],
     });
   }
 
   async findOne(id: number): Promise<Game> {
     const game = await this.gamesRepository.findOne({
       where: { id },
-      relations: ['platforms', 'images', 'genres'],
+      relations: ['platforms', 'images', 'genres', 'developers'],
     });
     if (!game) {
       throw new NotFoundException(`Game with ID ${id} not found`);
@@ -84,11 +107,15 @@ export class GamesService {
 
   async update(
     id: number,
-    gameData: Partial<Game> & { platforms?: number[]; genres?: number[] },
+    gameData: Partial<Game> & {
+      platforms?: number[];
+      genres?: number[];
+      developers?: number[];
+    },
   ): Promise<Game> {
     const game = await this.gamesRepository.findOne({
       where: { id },
-      relations: ['platforms', 'genres', 'images'],
+      relations: ['platforms', 'genres', 'developers', 'images'],
     });
 
     if (!game) {
@@ -117,8 +144,19 @@ export class GamesService {
       game.genres = genres;
     }
 
+    // Si se proporcionan IDs de desarrollador, actualízalos
+    if (gameData.developers && Array.isArray(gameData.developers)) {
+      const developers = await this.developerRepository.findBy({
+        id: In(gameData.developers),
+      });
+      if (developers.length !== gameData.developers.length) {
+        throw new NotFoundException('Uno o más desarrolladores no encontrados');
+      }
+      game.developers = developers;
+    }
+
     // Actualiza otros campos
-    const { platforms, genres, ...otherData } = gameData;
+    const { platforms, genres, developers, ...otherData } = gameData;
     Object.assign(game, otherData);
 
     // Guarda los cambios
@@ -132,7 +170,7 @@ export class GamesService {
   async findOneWithImages(id: number): Promise<Game> {
     const game = await this.gamesRepository.findOne({
       where: { id },
-      relations: ['images', 'platforms', 'genres'],
+      relations: ['images', 'platforms', 'genres', 'developers'],
     });
 
     if (!game) {
@@ -161,7 +199,7 @@ export class GamesService {
 
   async findAllWithImages(): Promise<Game[]> {
     return this.gamesRepository.find({
-      relations: ['images', 'platforms', 'genres'],
+      relations: ['images', 'platforms', 'genres', 'developers'],
     });
   }
 
@@ -171,6 +209,7 @@ export class GamesService {
       .leftJoinAndSelect('game.images', 'image')
       .leftJoinAndSelect('game.platforms', 'platform')
       .leftJoinAndSelect('game.genres', 'genre')
+      .leftJoinAndSelect('game.developers', 'developer')
       .where('game.coverId IS NOT NULL')
       .orderBy('RAND()')
       .take(limit)

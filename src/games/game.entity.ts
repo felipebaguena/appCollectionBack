@@ -9,6 +9,7 @@ import {
 import { Image } from '../images/image.entity';
 import { Platform } from '../platforms/platform.entity';
 import { Genre } from '../genres/genre.entity';
+import { Developer } from '../developers/developer.entity';
 
 @Entity()
 export class Game {
@@ -37,4 +38,8 @@ export class Game {
 
   @OneToMany(() => Image, (image) => image.game)
   images: Image[];
+
+  @ManyToMany(() => Developer)
+  @JoinTable()
+  developers: Developer[];
 }
