@@ -223,7 +223,7 @@ export class GamesService {
     limit: number;
     sortField?: string;
     sortOrder?: 'ASC' | 'DESC';
-  }): Promise<{ data: Game[]; total: number; totalPages: number }> {
+  }): Promise<{ data: Game[]; totalItems: number; totalPages: number }> {
     const { page, limit, sortField, sortOrder } = dataTableOptions;
     const skip = (page - 1) * limit;
 
@@ -238,13 +238,13 @@ export class GamesService {
       queryBuilder.orderBy(`game.${sortField}`, sortOrder);
     }
 
-    const [games, total] = await queryBuilder
+    const [games, totalItems] = await queryBuilder
       .skip(skip)
       .take(limit)
       .getManyAndCount();
 
-    const totalPages = Math.ceil(total / limit);
+    const totalPages = Math.ceil(totalItems / limit);
 
-    return { data: games, total, totalPages };
+    return { data: games, totalItems, totalPages };
   }
 }

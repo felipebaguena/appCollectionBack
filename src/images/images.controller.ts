@@ -1,4 +1,15 @@
-import { Controller, Get, Post, Put, Delete, Param, Body, UseGuards, UseInterceptors, UploadedFile } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Put,
+  Delete,
+  Param,
+  Body,
+  UseGuards,
+  UseInterceptors,
+  UploadedFile,
+} from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
 import { RolesGuard } from '../guards/roles.guard';
 import { Roles } from '../guards/roles.decorator';
@@ -15,28 +26,34 @@ export class ImagesController {
   @Post()
   @UseGuards(AuthGuard('jwt'), RolesGuard)
   @Roles('SUPERUSER')
-  @UseInterceptors(FileInterceptor('image', {
-    storage: diskStorage({
-      destination: './uploads/images',
-      filename: (req, file, cb) => {
-        const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
-        const ext = extname(file.originalname);
-        cb(null, `${file.fieldname}-${uniqueSuffix}${ext}`);
-      }
+  @UseInterceptors(
+    FileInterceptor('image', {
+      storage: diskStorage({
+        destination: './uploads/images',
+        filename: (req, file, cb) => {
+          const uniqueSuffix =
+            Date.now() + '-' + Math.round(Math.random() * 1e9);
+          const ext = extname(file.originalname);
+          cb(null, `${file.fieldname}-${uniqueSuffix}${ext}`);
+        },
+      }),
+      fileFilter: (req, file, cb) => {
+        if (!file.originalname.match(/\.(jpg|jpeg|png|gif)$/)) {
+          return cb(new Error('Solo se permiten archivos de imagen'), false);
+        }
+        cb(null, true);
+      },
     }),
-    fileFilter: (req, file, cb) => {
-      if (!file.originalname.match(/\.(jpg|jpeg|png|gif)$/)) {
-        return cb(new Error('Solo se permiten archivos de imagen'), false);
-      }
-      cb(null, true);
-    },
-  }))
-  async create(@UploadedFile() file: Express.Multer.File, @Body() imageData: Partial<Image>) {
+  )
+  async create(
+    @UploadedFile() file: Express.Multer.File,
+    @Body() imageData: Partial<Image>,
+  ) {
     console.log('Received data:', { file, imageData });
     if (!file) {
       throw new Error('No se ha subido ningún archivo');
     }
-    
+
     const image = await this.imagesService.create({
       ...imageData,
       filename: file.filename,
@@ -70,7 +87,7 @@ export class ImagesController {
     return this.imagesService.remove(+id);
   }
 
-  @Put(':id/setCover')
+  @Post(':id/setCover')
   @UseGuards(AuthGuard('jwt'), RolesGuard)
   @Roles('SUPERUSER')
   async setCover(@Param('id') id: string, @Body('gameId') gameId: number) {
