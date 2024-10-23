@@ -24,7 +24,7 @@ export class Image {
   @Column({ name: 'game_id', nullable: true })
   gameId: number;
 
-  @ManyToOne(() => Game, (game) => game.images)
+  @ManyToOne(() => Game, (game) => game.images, { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'game_id' })
   game: Game;
 }

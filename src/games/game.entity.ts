@@ -36,7 +36,10 @@ export class Game {
   @Column({ nullable: true })
   coverId: number;
 
-  @OneToMany(() => Image, (image) => image.game)
+  @OneToMany(() => Image, (image) => image.game, {
+    cascade: true,
+    onDelete: 'CASCADE',
+  })
   images: Image[];
 
   @ManyToMany(() => Developer)

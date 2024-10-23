@@ -98,9 +98,11 @@ export class GamesController {
         sortField?: string;
         sortOrder?: 'ASC' | 'DESC';
       };
+      filter?: {
+        search?: string;
+      };
     },
   ) {
-    const { dataTable } = body;
-    return this.gamesService.getGamesForDataTable(dataTable);
+    return this.gamesService.getGamesForDataTable(body);
   }
 }

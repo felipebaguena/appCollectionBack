@@ -164,7 +164,16 @@ export class GamesService {
   }
 
   async remove(id: number): Promise<void> {
-    await this.gamesRepository.delete(id);
+    const game = await this.gamesRepository.findOne({
+      where: { id },
+      relations: ['images'],
+    });
+
+    if (!game) {
+      throw new NotFoundException(`Game with ID ${id} not found`);
+    }
+
+    await this.gamesRepository.remove(game);
   }
 
   async findOneWithImages(id: number): Promise<Game> {
@@ -218,13 +227,19 @@ export class GamesService {
     return games;
   }
 
-  async getGamesForDataTable(dataTableOptions: {
-    page: number;
-    limit: number;
-    sortField?: string;
-    sortOrder?: 'ASC' | 'DESC';
+  async getGamesForDataTable(options: {
+    dataTable: {
+      page: number;
+      limit: number;
+      sortField?: string;
+      sortOrder?: 'ASC' | 'DESC';
+    };
+    filter?: {
+      search?: string;
+    };
   }): Promise<{ data: Game[]; totalItems: number; totalPages: number }> {
-    const { page, limit, sortField, sortOrder } = dataTableOptions;
+    const { dataTable, filter } = options;
+    const { page, limit, sortField, sortOrder } = dataTable;
     const skip = (page - 1) * limit;
 
     const queryBuilder = this.gamesRepository
@@ -233,6 +248,12 @@ export class GamesService {
       .leftJoinAndSelect('game.genres', 'genre')
       .leftJoinAndSelect('game.developers', 'developer')
       .leftJoinAndSelect('game.images', 'image');
+
+    if (filter?.search) {
+      queryBuilder.andWhere('game.title LIKE :search', {
+        search: `%${filter.search}%`,
+      });
+    }
 
     if (sortField && sortOrder) {
       queryBuilder.orderBy(`game.${sortField}`, sortOrder);
