@@ -98,4 +98,11 @@ export class ImagesController {
   async findByGameId(@Param('gameId') gameId: string) {
     return this.imagesService.findByGameId(+gameId);
   }
+
+  @Delete()
+  @UseGuards(AuthGuard('jwt'), RolesGuard)
+  @Roles('SUPERUSER')
+  async removeMultiple(@Body() body: { ids: number[] }) {
+    return this.imagesService.removeMultiple(body.ids);
+  }
 }

@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { Repository, In } from 'typeorm';
 import { Image } from './image.entity';
 import { Game } from '../games/game.entity';
 
@@ -10,7 +10,7 @@ export class ImagesService {
     @InjectRepository(Image)
     private imagesRepository: Repository<Image>,
     @InjectRepository(Game)
-    private gamesRepository: Repository<Game>
+    private gamesRepository: Repository<Game>,
   ) {}
 
   async create(imageData: Partial<Image>): Promise<Image> {
@@ -39,20 +39,14 @@ export class ImagesService {
     // Primero, resetea isCover para todas las imágenes del juego
     await this.imagesRepository.update(
       { game: { id: gameId } },
-      { isCover: false }
+      { isCover: false },
     );
 
     // Luego, establece la nueva imagen de portada
-    await this.imagesRepository.update(
-      { id: imageId },
-      { isCover: true }
-    );
+    await this.imagesRepository.update({ id: imageId }, { isCover: true });
 
     // Finalmente, actualiza el coverId en el juego
-    await this.gamesRepository.update(
-      { id: gameId },
-      { coverId: imageId }
-    );
+    await this.gamesRepository.update({ id: gameId }, { coverId: imageId });
   }
 
   async findByGameId(gameId: number): Promise<Image[]> {
@@ -60,5 +54,9 @@ export class ImagesService {
       where: { game: { id: gameId } },
       relations: ['game'],
     });
+  }
+
+  async removeMultiple(ids: number[]): Promise<void> {
+    await this.imagesRepository.delete({ id: In(ids) });
   }
 }
