@@ -52,4 +52,22 @@ export class PlatformsController {
   remove(@Param('id') id: string) {
     return this.platformsService.remove(+id);
   }
+
+  @Post('datatable')
+  async getPlatformsForDataTable(
+    @Body()
+    body: {
+      dataTable: {
+        page: number;
+        limit: number;
+        sortField?: string;
+        sortOrder?: 'ASC' | 'DESC';
+      };
+      filter?: {
+        search?: string;
+      };
+    },
+  ) {
+    return this.platformsService.getPlatformsForDataTable(body);
+  }
 }

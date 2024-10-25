@@ -37,4 +37,43 @@ export class PlatformsService {
   async remove(id: number): Promise<void> {
     await this.platformsRepository.delete(id);
   }
+
+  async getPlatformsForDataTable(options: {
+    dataTable: {
+      page: number;
+      limit: number;
+      sortField?: string;
+      sortOrder?: 'ASC' | 'DESC';
+    };
+    filter?: {
+      search?: string;
+    };
+  }): Promise<{ data: Platform[]; totalItems: number; totalPages: number }> {
+    const { dataTable, filter } = options;
+    const { page, limit, sortField, sortOrder } = dataTable;
+    const skip = (page - 1) * limit;
+
+    const queryBuilder = this.platformsRepository
+      .createQueryBuilder('platform')
+      .select(['platform.id', 'platform.name', 'platform.code']);
+
+    if (filter?.search) {
+      queryBuilder.andWhere('platform.name LIKE :search', {
+        search: `%${filter.search}%`,
+      });
+    }
+
+    if (sortField && sortOrder) {
+      queryBuilder.orderBy(`platform.${sortField}`, sortOrder);
+    }
+
+    const [platforms, totalItems] = await queryBuilder
+      .skip(skip)
+      .take(limit)
+      .getManyAndCount();
+
+    const totalPages = Math.ceil(totalItems / limit);
+
+    return { data: platforms, totalItems, totalPages };
+  }
 }
