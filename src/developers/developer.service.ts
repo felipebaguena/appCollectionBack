@@ -74,4 +74,43 @@ export class DevelopersService {
   async remove(id: number): Promise<void> {
     await this.developersRepository.delete(id);
   }
+
+  async getDevelopersForDataTable(options: {
+    dataTable: {
+      page: number;
+      limit: number;
+      sortField?: string;
+      sortOrder?: 'ASC' | 'DESC';
+    };
+    filter?: {
+      search?: string;
+    };
+  }): Promise<{ data: Developer[]; totalItems: number; totalPages: number }> {
+    const { dataTable, filter } = options;
+    const { page, limit, sortField, sortOrder } = dataTable;
+    const skip = (page - 1) * limit;
+
+    const queryBuilder = this.developersRepository
+      .createQueryBuilder('developer')
+      .select(['developer.id', 'developer.name', 'developer.code']);
+
+    if (filter?.search) {
+      queryBuilder.andWhere('developer.name LIKE :search', {
+        search: `%${filter.search}%`,
+      });
+    }
+
+    if (sortField && sortOrder) {
+      queryBuilder.orderBy(`developer.${sortField}`, sortOrder);
+    }
+
+    const [developers, totalItems] = await queryBuilder
+      .skip(skip)
+      .take(limit)
+      .getManyAndCount();
+
+    const totalPages = Math.ceil(totalItems / limit);
+
+    return { data: developers, totalItems, totalPages };
+  }
 }

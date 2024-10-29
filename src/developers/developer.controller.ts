@@ -57,4 +57,22 @@ export class DevelopersController {
   remove(@Param('id') id: string) {
     return this.developersService.remove(+id);
   }
+
+  @Post('datatable')
+  async getDevelopersForDataTable(
+    @Body()
+    body: {
+      dataTable: {
+        page: number;
+        limit: number;
+        sortField?: string;
+        sortOrder?: 'ASC' | 'DESC';
+      };
+      filter?: {
+        search?: string;
+      };
+    },
+  ) {
+    return this.developersService.getDevelopersForDataTable(body);
+  }
 }
