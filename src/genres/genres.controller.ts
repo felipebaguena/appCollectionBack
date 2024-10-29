@@ -57,4 +57,22 @@ export class GenresController {
   findByCode(@Param('code') code: string) {
     return this.genresService.findByCode(code);
   }
+
+  @Post('datatable')
+  async getGenresForDataTable(
+    @Body()
+    body: {
+      dataTable: {
+        page: number;
+        limit: number;
+        sortField?: string;
+        sortOrder?: 'ASC' | 'DESC';
+      };
+      filter?: {
+        search?: string;
+      };
+    },
+  ) {
+    return this.genresService.getGenresForDataTable(body);
+  }
 }

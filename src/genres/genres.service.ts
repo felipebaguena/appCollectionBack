@@ -70,4 +70,43 @@ export class GenresService {
     }
     return genre;
   }
+
+  async getGenresForDataTable(options: {
+    dataTable: {
+      page: number;
+      limit: number;
+      sortField?: string;
+      sortOrder?: 'ASC' | 'DESC';
+    };
+    filter?: {
+      search?: string;
+    };
+  }): Promise<{ data: Genre[]; totalItems: number; totalPages: number }> {
+    const { dataTable, filter } = options;
+    const { page, limit, sortField, sortOrder } = dataTable;
+    const skip = (page - 1) * limit;
+
+    const queryBuilder = this.genresRepository
+      .createQueryBuilder('genre')
+      .select(['genre.id', 'genre.name', 'genre.code']);
+
+    if (filter?.search) {
+      queryBuilder.andWhere('genre.name LIKE :search', {
+        search: `%${filter.search}%`,
+      });
+    }
+
+    if (sortField && sortOrder) {
+      queryBuilder.orderBy(`genre.${sortField}`, sortOrder);
+    }
+
+    const [genres, totalItems] = await queryBuilder
+      .skip(skip)
+      .take(limit)
+      .getManyAndCount();
+
+    const totalPages = Math.ceil(totalItems / limit);
+
+    return { data: genres, totalItems, totalPages };
+  }
 }
