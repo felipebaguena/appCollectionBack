@@ -6,6 +6,7 @@ import { Image } from '../images/image.entity';
 import { Platform } from '../platforms/platform.entity';
 import { Genre } from '../genres/genre.entity';
 import { Developer } from '../developers/developer.entity';
+import { CollectionSortType } from './games.enum';
 
 @Injectable()
 export class GamesService {
@@ -303,5 +304,137 @@ export class GamesService {
     const totalPages = Math.ceil(totalItems / limit);
 
     return { data: games, totalItems, totalPages };
+  }
+
+  async getGamesCollection(options: {
+    collection: {
+      page: number;
+      limit: number;
+      sortType: CollectionSortType;
+    };
+    filter?: {
+      search?: string;
+      platformIds?: number[];
+      genreIds?: number[];
+      developerIds?: number[];
+      yearRange?: {
+        start?: number;
+        end?: number;
+      } | null;
+    };
+  }): Promise<{
+    data: {
+      id: number;
+      title: string;
+      coverImage: {
+        id: number;
+        path: string;
+      } | null;
+    }[];
+    totalItems: number;
+    totalPages: number;
+  }> {
+    const { collection, filter } = options;
+    const { page, limit, sortType } = collection;
+    const skip = (page - 1) * limit;
+
+    const queryBuilder = this.gamesRepository
+      .createQueryBuilder('game')
+      .leftJoin('game.images', 'image', 'image.id = game.coverId')
+      .select([
+        'game.id',
+        'game.title',
+        'game.releaseYear',
+        'image.id',
+        'image.path',
+      ])
+      .distinct(true);
+
+    // Aplicar filtros
+    if (filter?.search) {
+      queryBuilder.andWhere('game.title LIKE :search', {
+        search: `%${filter.search}%`,
+      });
+    }
+
+    if (filter?.platformIds && filter.platformIds.length > 0) {
+      queryBuilder
+        .innerJoin('game.platforms', 'platform')
+        .andWhere('platform.id IN (:...platformIds)', {
+          platformIds: filter.platformIds,
+        });
+    }
+
+    if (filter?.genreIds && filter.genreIds.length > 0) {
+      queryBuilder
+        .innerJoin('game.genres', 'genre')
+        .andWhere('genre.id IN (:...genreIds)', {
+          genreIds: filter.genreIds,
+        });
+    }
+
+    if (filter?.developerIds && filter.developerIds.length > 0) {
+      queryBuilder
+        .innerJoin('game.developers', 'developer')
+        .andWhere('developer.id IN (:...developerIds)', {
+          developerIds: filter.developerIds,
+        });
+    }
+
+    if (filter?.yearRange && filter.yearRange.start && filter.yearRange.end) {
+      queryBuilder.andWhere(
+        'game.releaseYear BETWEEN :startYear AND :endYear',
+        {
+          startYear: filter.yearRange.start,
+          endYear: filter.yearRange.end,
+        },
+      );
+    }
+
+    // Aplicar ordenación
+    switch (sortType) {
+      case CollectionSortType.TITLE_ASC:
+        queryBuilder.orderBy('game.title', 'ASC');
+        break;
+      case CollectionSortType.TITLE_DESC:
+        queryBuilder.orderBy('game.title', 'DESC');
+        break;
+      case CollectionSortType.YEAR_ASC:
+        queryBuilder.orderBy('game.releaseYear', 'ASC');
+        break;
+      case CollectionSortType.YEAR_DESC:
+        queryBuilder.orderBy('game.releaseYear', 'DESC');
+        break;
+    }
+
+    // Ordenación secundaria por título para mantener consistencia
+    if (
+      sortType === CollectionSortType.YEAR_ASC ||
+      sortType === CollectionSortType.YEAR_DESC
+    ) {
+      queryBuilder.addOrderBy('game.title', 'ASC');
+    }
+
+    const [games, totalItems] = await queryBuilder
+      .skip(skip)
+      .take(limit)
+      .getManyAndCount();
+
+    const totalPages = Math.ceil(totalItems / limit);
+
+    return {
+      data: games.map((game) => ({
+        id: game.id,
+        title: game.title,
+        coverImage: game.images?.[0]
+          ? {
+              id: game.images[0].id,
+              path: game.images[0].path,
+            }
+          : null,
+      })),
+      totalItems,
+      totalPages,
+    };
   }
 }

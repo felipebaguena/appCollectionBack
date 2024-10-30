@@ -16,6 +16,7 @@ import { GamesService } from './games.service';
 import { Game } from './game.entity';
 import { RolesGuard } from '../guards/roles.guard';
 import { Roles } from '../guards/roles.decorator';
+import { CollectionSortType } from './games.enum';
 
 @Controller('games')
 export class GamesController {
@@ -104,5 +105,29 @@ export class GamesController {
     },
   ) {
     return this.gamesService.getGamesForDataTable(body);
+  }
+
+  @Post('collection')
+  async getGamesCollection(
+    @Body()
+    body: {
+      collection: {
+        page: number;
+        limit: number;
+        sortType: CollectionSortType;
+      };
+      filter?: {
+        search?: string;
+        platformIds?: number[];
+        genreIds?: number[];
+        developerIds?: number[];
+        yearRange?: {
+          start?: number;
+          end?: number;
+        } | null;
+      };
+    },
+  ) {
+    return this.gamesService.getGamesCollection(body);
   }
 }
