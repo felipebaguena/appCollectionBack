@@ -236,6 +236,9 @@ export class GamesService {
     };
     filter?: {
       search?: string;
+      platformIds?: number[];
+      genreIds?: number[];
+      developerIds?: number[];
     };
   }): Promise<{ data: Game[]; totalItems: number; totalPages: number }> {
     const { dataTable, filter } = options;
@@ -252,6 +255,24 @@ export class GamesService {
     if (filter?.search) {
       queryBuilder.andWhere('game.title LIKE :search', {
         search: `%${filter.search}%`,
+      });
+    }
+
+    if (filter?.platformIds && filter.platformIds.length > 0) {
+      queryBuilder.andWhere('platform.id IN (:...platformIds)', {
+        platformIds: filter.platformIds,
+      });
+    }
+
+    if (filter?.genreIds && filter.genreIds.length > 0) {
+      queryBuilder.andWhere('genre.id IN (:...genreIds)', {
+        genreIds: filter.genreIds,
+      });
+    }
+
+    if (filter?.developerIds && filter.developerIds.length > 0) {
+      queryBuilder.andWhere('developer.id IN (:...developerIds)', {
+        developerIds: filter.developerIds,
       });
     }
 
