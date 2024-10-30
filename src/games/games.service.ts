@@ -239,6 +239,10 @@ export class GamesService {
       platformIds?: number[];
       genreIds?: number[];
       developerIds?: number[];
+      yearRange?: {
+        start?: number;
+        end?: number;
+      } | null;
     };
   }): Promise<{ data: Game[]; totalItems: number; totalPages: number }> {
     const { dataTable, filter } = options;
@@ -274,6 +278,17 @@ export class GamesService {
       queryBuilder.andWhere('developer.id IN (:...developerIds)', {
         developerIds: filter.developerIds,
       });
+    }
+
+    // Verificación más robusta para el rango de años
+    if (filter?.yearRange && filter.yearRange.start && filter.yearRange.end) {
+      queryBuilder.andWhere(
+        'game.releaseYear BETWEEN :startYear AND :endYear',
+        {
+          startYear: filter.yearRange.start,
+          endYear: filter.yearRange.end,
+        },
+      );
     }
 
     if (sortField && sortOrder) {
