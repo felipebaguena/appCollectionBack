@@ -9,6 +9,7 @@ import {
   UseGuards,
   Logger,
   Put,
+  Query,
 } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
 import { PlatformsService } from './platforms.service';
@@ -32,6 +33,12 @@ export class PlatformsController {
   @Get()
   findAll() {
     return this.platformsService.findAll();
+  }
+
+  @Get('multiselect')
+  async getPlatformsForMultiselect(@Query('search') search?: string) {
+    const searchTerm = search?.trim() || undefined;
+    return this.platformsService.getPlatformsForMultiselect(searchTerm);
   }
 
   @Get(':id')

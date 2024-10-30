@@ -76,4 +76,26 @@ export class PlatformsService {
 
     return { data: platforms, totalItems, totalPages };
   }
+
+  async getPlatformsForMultiselect(search?: string): Promise<
+    {
+      id: number;
+      name: string;
+      code: string;
+    }[]
+  > {
+    const queryBuilder = this.platformsRepository
+      .createQueryBuilder('platform')
+      .select(['platform.id', 'platform.name', 'platform.code']);
+
+    if (search && search.trim() !== '') {
+      queryBuilder.where('platform.name LIKE :search', {
+        search: `%${search.trim()}%`,
+      });
+    }
+
+    queryBuilder.orderBy('platform.name', 'ASC');
+
+    return queryBuilder.getMany();
+  }
 }
