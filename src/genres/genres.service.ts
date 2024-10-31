@@ -109,4 +109,26 @@ export class GenresService {
 
     return { data: genres, totalItems, totalPages };
   }
+
+  async getGenresForMultiselect(search?: string): Promise<
+    {
+      id: number;
+      name: string;
+      code: string;
+    }[]
+  > {
+    const queryBuilder = this.genresRepository
+      .createQueryBuilder('genre')
+      .select(['genre.id', 'genre.name', 'genre.code']);
+
+    if (search && search.trim() !== '') {
+      queryBuilder.where('genre.name LIKE :search', {
+        search: `%${search.trim()}%`,
+      });
+    }
+
+    queryBuilder.orderBy('genre.name', 'ASC');
+
+    return queryBuilder.getMany();
+  }
 }

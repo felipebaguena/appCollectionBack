@@ -9,6 +9,7 @@ import {
   UseGuards,
   Logger,
   Put,
+  Query,
 } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
 import { GenresService } from './genres.service';
@@ -32,6 +33,12 @@ export class GenresController {
   @Get()
   findAll() {
     return this.genresService.findAll();
+  }
+
+  @Get('multiselect')
+  async getGenresForMultiselect(@Query('search') search?: string) {
+    const searchTerm = search?.trim() || undefined;
+    return this.genresService.getGenresForMultiselect(searchTerm);
   }
 
   @Get(':id')
