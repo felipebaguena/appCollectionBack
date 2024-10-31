@@ -21,6 +21,8 @@ import { Genre } from './genres/genre.entity';
 import { GenresModule } from './genres/genres.module';
 import { Developer } from './developers/developer.entity';
 import { DevelopersModule } from './developers/developers.module';
+import { UserGame } from './user-games/user-game.entity';
+import { UserGamesModule } from './user-games/user-games.module';
 
 @Module({
   imports: [
@@ -34,7 +36,7 @@ import { DevelopersModule } from './developers/developers.module';
       username: 'root',
       password: 'elculodealyna',
       database: 'nest_ddbb',
-      entities: [User, Role, Game, Image, Platform, Genre, Developer],
+      entities: [User, Role, Game, Image, Platform, Genre, Developer, UserGame],
       synchronize: true,
       logging: true,
       logger: 'advanced-console',
@@ -51,6 +53,7 @@ import { DevelopersModule } from './developers/developers.module';
       rootPath: join(__dirname, '..', 'uploads'),
       serveRoot: '/uploads',
     }),
+    UserGamesModule,
   ],
   controllers: [AppController, UsersnestController],
   providers: [AppService],
