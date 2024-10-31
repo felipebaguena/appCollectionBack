@@ -8,6 +8,7 @@ import {
   UseGuards,
   Logger,
   Put,
+  Query,
 } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
 
@@ -32,6 +33,12 @@ export class DevelopersController {
   @Get()
   findAll() {
     return this.developersService.findAll();
+  }
+
+  @Get('multiselect')
+  async getDevelopersForMultiselect(@Query('search') search?: string) {
+    const searchTerm = search?.trim() || undefined;
+    return this.developersService.getDevelopersForMultiselect(searchTerm);
   }
 
   @Get(':id')

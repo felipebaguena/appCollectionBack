@@ -75,6 +75,28 @@ export class DevelopersService {
     await this.developersRepository.delete(id);
   }
 
+  async getDevelopersForMultiselect(search?: string): Promise<
+    {
+      id: number;
+      name: string;
+      code: string;
+    }[]
+  > {
+    const queryBuilder = this.developersRepository
+      .createQueryBuilder('developer')
+      .select(['developer.id', 'developer.name', 'developer.code']);
+
+    if (search && search.trim() !== '') {
+      queryBuilder.where('developer.name LIKE :search', {
+        search: `%${search.trim()}%`,
+      });
+    }
+
+    queryBuilder.orderBy('developer.name', 'ASC');
+
+    return queryBuilder.getMany();
+  }
+
   async getDevelopersForDataTable(options: {
     dataTable: {
       page: number;
