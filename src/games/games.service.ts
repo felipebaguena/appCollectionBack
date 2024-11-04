@@ -7,6 +7,7 @@ import { Platform } from '../platforms/platform.entity';
 import { Genre } from '../genres/genre.entity';
 import { Developer } from '../developers/developer.entity';
 import { CollectionSortType } from './games.enum';
+import { UserGame } from 'src/user-games/user-game.entity';
 
 @Injectable()
 export class GamesService {
@@ -322,33 +323,50 @@ export class GamesService {
         end?: number;
       } | null;
     };
+    userId: number;
   }): Promise<{
     data: {
       id: number;
       title: string;
+      releaseYear: number;
       coverImage: {
         id: number;
         path: string;
       } | null;
+      platforms: {
+        id: number;
+        name: string;
+      }[];
+      inCollection: boolean;
     }[];
     totalItems: number;
     totalPages: number;
   }> {
-    const { collection, filter } = options;
+    const { collection, filter, userId } = options;
     const { page, limit, sortType } = collection;
     const skip = (page - 1) * limit;
 
     const queryBuilder = this.gamesRepository
       .createQueryBuilder('game')
-      .leftJoin('game.images', 'image', 'image.id = game.coverId')
+      .leftJoinAndSelect('game.images', 'image', 'image.id = game.coverId')
+      .leftJoin(
+        UserGame,
+        'userGame',
+        'userGame.gameId = game.id AND userGame.userId = :userId',
+        { userId },
+      )
+      .leftJoin('game.platforms', 'platform')
       .select([
-        'game.id',
-        'game.title',
-        'game.releaseYear',
-        'image.id',
-        'image.path',
+        'game.id as game_id',
+        'game.title as game_title',
+        'game.releaseYear as game_release_year',
+        'image.id as image_id',
+        'image.path as image_path',
+        'MAX(userGame.id) as userGame_id',
+        'GROUP_CONCAT(DISTINCT platform.id) as platform_ids',
+        'GROUP_CONCAT(DISTINCT platform.name) as platform_names',
       ])
-      .distinct(true);
+      .groupBy('game.id, game.title, game.releaseYear, image.id, image.path');
 
     // Aplicar filtros
     if (filter?.search) {
@@ -394,47 +412,53 @@ export class GamesService {
     // Aplicar ordenación
     switch (sortType) {
       case CollectionSortType.TITLE_ASC:
-        queryBuilder.orderBy('game.title', 'ASC');
+        queryBuilder.orderBy('game_title', 'ASC');
         break;
       case CollectionSortType.TITLE_DESC:
-        queryBuilder.orderBy('game.title', 'DESC');
+        queryBuilder.orderBy('game_title', 'DESC');
         break;
       case CollectionSortType.YEAR_ASC:
-        queryBuilder.orderBy('game.releaseYear', 'ASC');
+        queryBuilder.orderBy('game_release_year', 'ASC');
         break;
       case CollectionSortType.YEAR_DESC:
-        queryBuilder.orderBy('game.releaseYear', 'DESC');
+        queryBuilder.orderBy('game_release_year', 'DESC');
         break;
     }
 
-    // Ordenación secundaria por título para mantener consistencia
     if (
       sortType === CollectionSortType.YEAR_ASC ||
       sortType === CollectionSortType.YEAR_DESC
     ) {
-      queryBuilder.addOrderBy('game.title', 'ASC');
+      queryBuilder.addOrderBy('game_title', 'ASC');
     }
 
-    const [games, totalItems] = await queryBuilder
-      .skip(skip)
-      .take(limit)
-      .getManyAndCount();
+    // Primero obtener el total de items
+    const totalItems = await queryBuilder.getCount();
 
-    const totalPages = Math.ceil(totalItems / limit);
+    // Luego aplicar la paginación y obtener los resultados
+    const games = await queryBuilder.offset(skip).limit(limit).getRawMany();
 
     return {
       data: games.map((game) => ({
-        id: game.id,
-        title: game.title,
-        coverImage: game.images?.[0]
+        id: game.game_id,
+        title: game.game_title,
+        releaseYear: game.game_release_year,
+        coverImage: game.image_id
           ? {
-              id: game.images[0].id,
-              path: game.images[0].path,
+              id: game.image_id,
+              path: game.image_path,
             }
           : null,
+        platforms: game.platform_ids
+          ? game.platform_ids.split(',').map((id: string, index: number) => ({
+              id: parseInt(id),
+              name: game.platform_names.split(',')[index],
+            }))
+          : [],
+        inCollection: Boolean(game.userGame_id),
       })),
       totalItems,
-      totalPages,
+      totalPages: Math.ceil(totalItems / limit),
     };
   }
 }

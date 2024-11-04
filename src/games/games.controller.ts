@@ -10,6 +10,7 @@ import {
   Logger,
   Query,
   ParseIntPipe,
+  Request,
 } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
 import { GamesService } from './games.service';
@@ -17,6 +18,7 @@ import { Game } from './game.entity';
 import { RolesGuard } from '../guards/roles.guard';
 import { Roles } from '../guards/roles.decorator';
 import { CollectionSortType } from './games.enum';
+import { OptionalJwtGuard } from '../auth/optional-jwt.guard';
 
 @Controller('games')
 export class GamesController {
@@ -108,7 +110,9 @@ export class GamesController {
   }
 
   @Post('collection')
+  @UseGuards(OptionalJwtGuard)
   async getGamesCollection(
+    @Request() req,
     @Body()
     body: {
       collection: {
@@ -128,6 +132,10 @@ export class GamesController {
       };
     },
   ) {
-    return this.gamesService.getGamesCollection(body);
+    const userId = req.user?.userId || null;
+    return this.gamesService.getGamesCollection({
+      ...body,
+      userId,
+    });
   }
 }
