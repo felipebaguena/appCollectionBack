@@ -258,4 +258,66 @@ export class UserGamesService {
       addedAt: ug.addedAt,
     }));
   }
+
+  async getUserGameDetails(
+    userId: number,
+    gameId: number,
+  ): Promise<{
+    id: number;
+    game: {
+      id: number;
+      title: string;
+      releaseYear: number;
+      coverImage?: {
+        id: number;
+        path: string;
+      };
+      platforms: {
+        id: number;
+        name: string;
+      }[];
+    };
+    rating: number;
+    status: number;
+    complete: boolean;
+    notes: string;
+    addedAt: Date;
+  }> {
+    const userGame = await this.userGamesRepository
+      .createQueryBuilder('userGame')
+      .leftJoinAndSelect('userGame.game', 'game')
+      .leftJoinAndSelect('game.images', 'image', 'image.id = game.coverId')
+      .leftJoinAndSelect('game.platforms', 'platform')
+      .where('userGame.user.id = :userId', { userId })
+      .andWhere('userGame.game.id = :gameId', { gameId })
+      .getOne();
+
+    if (!userGame) {
+      throw new NotFoundException('Juego no encontrado en tu colección');
+    }
+
+    return {
+      id: userGame.id,
+      game: {
+        id: userGame.game.id,
+        title: userGame.game.title,
+        releaseYear: userGame.game.releaseYear,
+        coverImage: userGame.game.images?.[0]
+          ? {
+              id: userGame.game.images[0].id,
+              path: userGame.game.images[0].path,
+            }
+          : undefined,
+        platforms: userGame.game.platforms.map((platform) => ({
+          id: platform.id,
+          name: platform.name,
+        })),
+      },
+      rating: userGame.rating,
+      status: userGame.status,
+      complete: userGame.complete,
+      notes: userGame.notes,
+      addedAt: userGame.addedAt,
+    };
+  }
 }
