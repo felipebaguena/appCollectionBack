@@ -378,11 +378,9 @@ export class GamesService {
     }
 
     if (filter?.platformIds && filter.platformIds.length > 0) {
-      queryBuilder
-        .innerJoin('game.platforms', 'platform')
-        .andWhere('platform.id IN (:...platformIds)', {
-          platformIds: filter.platformIds,
-        });
+      queryBuilder.andWhere('platform.id IN (:...platformIds)', {
+        platformIds: filter.platformIds,
+      });
     }
 
     if (filter?.genreIds && filter.genreIds.length > 0) {
