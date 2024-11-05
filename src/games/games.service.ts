@@ -8,6 +8,7 @@ import { Genre } from '../genres/genre.entity';
 import { Developer } from '../developers/developer.entity';
 import { CollectionSortType } from './games.enum';
 import { UserGame } from 'src/user-games/user-game.entity';
+import { CollectionFilterType } from './games.enum';
 
 @Injectable()
 export class GamesService {
@@ -322,6 +323,7 @@ export class GamesService {
         start?: number;
         end?: number;
       } | null;
+      collectionStatus?: CollectionFilterType;
     };
     userId: number;
   }): Promise<{
@@ -407,6 +409,19 @@ export class GamesService {
           endYear: filter.yearRange.end,
         },
       );
+    }
+
+    // Aplicamos el filtro usando el enum
+    if (filter?.collectionStatus) {
+      switch (filter.collectionStatus) {
+        case CollectionFilterType.IN_COLLECTION:
+          queryBuilder.andWhere('userGame.id IS NOT NULL');
+          break;
+        case CollectionFilterType.NOT_IN_COLLECTION:
+          queryBuilder.andWhere('userGame.id IS NULL');
+          break;
+        // Para CollectionFilterType.ALL no necesitamos añadir ningún filtro
+      }
     }
 
     // Aplicar ordenación
