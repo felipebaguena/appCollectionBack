@@ -1,6 +1,14 @@
-import { Entity, Column, PrimaryGeneratedColumn, ManyToOne } from 'typeorm';
+import {
+  Entity,
+  Column,
+  PrimaryGeneratedColumn,
+  ManyToOne,
+  ManyToMany,
+  JoinTable,
+} from 'typeorm';
 import { User } from '../users/user.entity';
 import { Game } from '../games/game.entity';
+import { Platform } from '../platforms/platform.entity';
 
 @Entity()
 export class UserGame {
@@ -12,6 +20,14 @@ export class UserGame {
 
   @ManyToOne(() => Game)
   game: Game;
+
+  @ManyToMany(() => Platform)
+  @JoinTable({
+    name: 'user_game_platforms',
+    joinColumn: { name: 'userGameId', referencedColumnName: 'id' },
+    inverseJoinColumn: { name: 'platformId', referencedColumnName: 'id' },
+  })
+  platforms: Platform[];
 
   @Column({ type: 'decimal', precision: 2, scale: 1, nullable: true })
   rating: number;

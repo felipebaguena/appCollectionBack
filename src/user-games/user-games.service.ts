@@ -8,6 +8,8 @@ import { Repository } from 'typeorm';
 import { UserGame } from './user-game.entity';
 import { User } from '../users/user.entity';
 import { Game } from '../games/game.entity';
+import { Platform } from '../platforms/platform.entity';
+import { In } from 'typeorm';
 
 @Injectable()
 export class UserGamesService {
@@ -16,6 +18,8 @@ export class UserGamesService {
     private userGamesRepository: Repository<UserGame>,
     @InjectRepository(Game)
     private gamesRepository: Repository<Game>,
+    @InjectRepository(Platform)
+    private platformRepository: Repository<Platform>,
   ) {}
 
   async addGameToCollection(
@@ -26,6 +30,7 @@ export class UserGamesService {
       status?: number;
       complete?: boolean;
       notes?: string;
+      platformIds?: number[];
     },
   ): Promise<UserGame> {
     const existingEntry = await this.userGamesRepository.findOne({
@@ -52,9 +57,20 @@ export class UserGamesService {
       throw new BadRequestException('El status debe estar entre 0 y 10');
     }
 
+    let platforms = [];
+    if (data.platformIds && data.platformIds.length > 0) {
+      platforms = await this.platformRepository.findBy({
+        id: In(data.platformIds),
+      });
+      if (platforms.length !== data.platformIds.length) {
+        throw new BadRequestException('Una o más plataformas no encontradas');
+      }
+    }
+
     const userGame = this.userGamesRepository.create({
       user: { id: userId },
       game: { id: gameId },
+      platforms,
       ...data,
     });
 
@@ -69,6 +85,7 @@ export class UserGamesService {
       status?: number;
       complete?: boolean;
       notes?: string;
+      platformIds?: number[];
     },
   ): Promise<UserGame> {
     const userGame = await this.userGamesRepository.findOne({
@@ -76,6 +93,7 @@ export class UserGamesService {
         user: { id: userId },
         game: { id: gameId },
       },
+      relations: ['platforms'],
     });
 
     if (!userGame) {
@@ -93,6 +111,16 @@ export class UserGamesService {
 
     if (data.status && (data.status < 0 || data.status > 10)) {
       throw new BadRequestException('El status debe estar entre 0 y 10');
+    }
+
+    if (data.platformIds) {
+      const platforms = await this.platformRepository.findBy({
+        id: In(data.platformIds),
+      });
+      if (platforms.length !== data.platformIds.length) {
+        throw new BadRequestException('Una o más plataformas no encontradas');
+      }
+      userGame.platforms = platforms;
     }
 
     Object.assign(userGame, data);
@@ -160,6 +188,10 @@ export class UserGamesService {
           path: string;
         };
       };
+      platforms: {
+        id: number;
+        name: string;
+      }[];
       rating: number;
       status: number;
       complete: boolean;
@@ -180,6 +212,7 @@ export class UserGamesService {
       .createQueryBuilder('userGame')
       .leftJoinAndSelect('userGame.game', 'game')
       .leftJoinAndSelect('game.images', 'image', 'image.id = game.coverId')
+      .leftJoinAndSelect('userGame.platforms', 'platform')
       .where('userGame.user.id = :userId', { userId })
       .orderBy(`userGame.${sortBy}`, sortOrder);
 
@@ -202,6 +235,10 @@ export class UserGamesService {
               }
             : undefined,
         },
+        platforms: ug.platforms.map((platform) => ({
+          id: platform.id,
+          name: platform.name,
+        })),
         rating: ug.rating,
         status: ug.status,
         complete: ug.complete,
@@ -224,6 +261,10 @@ export class UserGamesService {
           path: string;
         };
       };
+      platforms: {
+        id: number;
+        name: string;
+      }[];
       rating: number;
       status: number;
       complete: boolean;
@@ -235,6 +276,7 @@ export class UserGamesService {
       .createQueryBuilder('userGame')
       .leftJoinAndSelect('userGame.game', 'game')
       .leftJoinAndSelect('game.images', 'image', 'image.id = game.coverId')
+      .leftJoinAndSelect('userGame.platforms', 'platform')
       .where('userGame.user.id = :userId', { userId })
       .orderBy('userGame.addedAt', 'DESC')
       .getMany();
@@ -251,6 +293,10 @@ export class UserGamesService {
             }
           : undefined,
       },
+      platforms: ug.platforms.map((platform) => ({
+        id: platform.id,
+        name: platform.name,
+      })),
       rating: ug.rating,
       status: ug.status,
       complete: ug.complete,
@@ -277,6 +323,10 @@ export class UserGamesService {
         name: string;
       }[];
     };
+    platforms: {
+      id: number;
+      name: string;
+    }[];
     rating: number;
     status: number;
     complete: boolean;
@@ -287,7 +337,8 @@ export class UserGamesService {
       .createQueryBuilder('userGame')
       .leftJoinAndSelect('userGame.game', 'game')
       .leftJoinAndSelect('game.images', 'image', 'image.id = game.coverId')
-      .leftJoinAndSelect('game.platforms', 'platform')
+      .leftJoinAndSelect('game.platforms', 'gamePlatform')
+      .leftJoinAndSelect('userGame.platforms', 'userPlatform')
       .where('userGame.user.id = :userId', { userId })
       .andWhere('userGame.game.id = :gameId', { gameId })
       .getOne();
@@ -313,6 +364,10 @@ export class UserGamesService {
           name: platform.name,
         })),
       },
+      platforms: userGame.platforms.map((platform) => ({
+        id: platform.id,
+        name: platform.name,
+      })),
       rating: userGame.rating,
       status: userGame.status,
       complete: userGame.complete,

@@ -44,6 +44,7 @@ export class UserGamesController {
       status?: number;
       complete?: boolean;
       notes?: string;
+      platformIds?: number[];
     },
   ) {
     const { gameId, ...data } = body;
@@ -72,6 +73,7 @@ export class UserGamesController {
       status?: number;
       complete?: boolean;
       notes?: string;
+      platformIds?: number[];
     },
   ) {
     return this.userGamesService.updateGameDetails(

@@ -6,9 +6,10 @@ import { Game } from '../games/game.entity';
 import { UserGamesController } from './user-games.controller';
 import { UserGamesService } from './user-games.service';
 import { User } from '../users/user.entity';
+import { Platform } from '../platforms/platform.entity';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([UserGame, Game, User])],
+  imports: [TypeOrmModule.forFeature([UserGame, Game, User, Platform])],
   controllers: [UserGamesController],
   providers: [UserGamesService],
   exports: [UserGamesService],
