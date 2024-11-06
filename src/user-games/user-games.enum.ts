@@ -10,3 +10,9 @@ export enum MyCollectionSortType {
   ADDED_ASC = 'ADDED_ASC',
   ADDED_DESC = 'ADDED_DESC',
 }
+
+export enum CompleteFilterType {
+  COMPLETE = 'COMPLETE',
+  INCOMPLETE = 'INCOMPLETE',
+  ALL = 'ALL',
+}

@@ -10,7 +10,7 @@ import { User } from '../users/user.entity';
 import { Game } from '../games/game.entity';
 import { Platform } from '../platforms/platform.entity';
 import { In } from 'typeorm';
-import { MyCollectionSortType } from './user-games.enum';
+import { MyCollectionSortType, CompleteFilterType } from './user-games.enum';
 
 @Injectable()
 export class UserGamesService {
@@ -187,6 +187,19 @@ export class UserGamesService {
           start?: number;
           end?: number;
         };
+        complete?: CompleteFilterType;
+        ratingRange?: {
+          start: number;
+          end: number;
+        };
+        statusRange?: {
+          start: number;
+          end: number;
+        };
+        addedAtRange?: {
+          start: string; // ISO date string
+          end: string; // ISO date string
+        };
       };
     },
   ): Promise<{
@@ -258,7 +271,63 @@ export class UserGamesService {
       });
     }
 
-    // Aplicar ordenación
+    // Filtro para complete
+    if (filter?.complete) {
+      switch (filter.complete) {
+        case CompleteFilterType.COMPLETE:
+          queryBuilder.andWhere('userGame.complete = :complete', {
+            complete: true,
+          });
+          break;
+        case CompleteFilterType.INCOMPLETE:
+          queryBuilder.andWhere('userGame.complete = :complete', {
+            complete: false,
+          });
+          break;
+        // Para ALL no necesitamos añadir ninguna condición
+      }
+    }
+
+    // Filtro para rating
+    if (
+      filter?.ratingRange?.start !== undefined &&
+      filter?.ratingRange?.end !== undefined
+    ) {
+      queryBuilder.andWhere(
+        'userGame.rating BETWEEN :ratingStart AND :ratingEnd',
+        {
+          ratingStart: filter.ratingRange.start,
+          ratingEnd: filter.ratingRange.end,
+        },
+      );
+    }
+
+    // Filtro para status
+    if (
+      filter?.statusRange?.start !== undefined &&
+      filter?.statusRange?.end !== undefined
+    ) {
+      queryBuilder.andWhere(
+        'userGame.status BETWEEN :statusStart AND :statusEnd',
+        {
+          statusStart: filter.statusRange.start,
+          statusEnd: filter.statusRange.end,
+        },
+      );
+    }
+
+    // Filtro para addedAt
+    if (filter?.addedAtRange?.start && filter?.addedAtRange?.end) {
+      queryBuilder.andWhere(
+        'userGame.addedAt BETWEEN :addedStart AND :addedEnd',
+        {
+          addedStart: new Date(filter.addedAtRange.start),
+          addedEnd: new Date(filter.addedAtRange.end),
+        },
+      );
+    }
+
+    // Ordenación
     switch (sortType) {
       case MyCollectionSortType.TITLE_ASC:
         queryBuilder.orderBy('game.title', 'ASC');
