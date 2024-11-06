@@ -10,6 +10,7 @@ import { User } from '../users/user.entity';
 import { Game } from '../games/game.entity';
 import { Platform } from '../platforms/platform.entity';
 import { In } from 'typeorm';
+import { MyCollectionSortType } from './user-games.enum';
 
 @Injectable()
 export class UserGamesService {
@@ -171,11 +172,22 @@ export class UserGamesService {
 
   async getUserCollection(
     userId: number,
-    options?: {
-      page?: number;
-      limit?: number;
-      sortBy?: 'rating' | 'status' | 'addedAt';
-      sortOrder?: 'ASC' | 'DESC';
+    options: {
+      collection: {
+        page: number;
+        limit: number;
+        sortType: MyCollectionSortType;
+      };
+      filter?: {
+        search?: string;
+        platformIds?: number[];
+        genreIds?: number[];
+        developerIds?: number[];
+        yearRange?: {
+          start?: number;
+          end?: number;
+        };
+      };
     },
   ): Promise<{
     data: {
@@ -201,22 +213,91 @@ export class UserGamesService {
     totalItems: number;
     totalPages: number;
   }> {
-    const {
-      page = 1,
-      limit = 10,
-      sortBy = 'addedAt',
-      sortOrder = 'DESC',
-    } = options || {};
+    const { collection, filter } = options;
+    const { page, limit, sortType } = collection;
+    const skip = (page - 1) * limit;
 
     const queryBuilder = this.userGamesRepository
       .createQueryBuilder('userGame')
       .leftJoinAndSelect('userGame.game', 'game')
       .leftJoinAndSelect('game.images', 'image', 'image.id = game.coverId')
       .leftJoinAndSelect('userGame.platforms', 'platform')
-      .where('userGame.user.id = :userId', { userId })
-      .orderBy(`userGame.${sortBy}`, sortOrder);
+      .leftJoinAndSelect('game.genres', 'genre')
+      .leftJoinAndSelect('game.developers', 'developer')
+      .where('userGame.user.id = :userId', { userId });
 
-    const skip = (page - 1) * limit;
+    // Aplicar filtros
+    if (filter?.search) {
+      queryBuilder.andWhere('game.title LIKE :search', {
+        search: `%${filter.search}%`,
+      });
+    }
+
+    if (filter?.platformIds?.length) {
+      queryBuilder.andWhere('platform.id IN (:...platformIds)', {
+        platformIds: filter.platformIds,
+      });
+    }
+
+    if (filter?.genreIds?.length) {
+      queryBuilder.andWhere('genre.id IN (:...genreIds)', {
+        genreIds: filter.genreIds,
+      });
+    }
+
+    if (filter?.developerIds?.length) {
+      queryBuilder.andWhere('developer.id IN (:...developerIds)', {
+        developerIds: filter.developerIds,
+      });
+    }
+
+    if (filter?.yearRange?.start && filter?.yearRange?.end) {
+      queryBuilder.andWhere('game.releaseYear BETWEEN :start AND :end', {
+        start: filter.yearRange.start,
+        end: filter.yearRange.end,
+      });
+    }
+
+    // Aplicar ordenación
+    switch (sortType) {
+      case MyCollectionSortType.TITLE_ASC:
+        queryBuilder.orderBy('game.title', 'ASC');
+        break;
+      case MyCollectionSortType.TITLE_DESC:
+        queryBuilder.orderBy('game.title', 'DESC');
+        break;
+      case MyCollectionSortType.YEAR_ASC:
+        queryBuilder.orderBy('game.releaseYear', 'ASC');
+        break;
+      case MyCollectionSortType.YEAR_DESC:
+        queryBuilder.orderBy('game.releaseYear', 'DESC');
+        break;
+      case MyCollectionSortType.RATING_ASC:
+        queryBuilder.orderBy('userGame.rating', 'ASC');
+        queryBuilder.addOrderBy('game.title', 'ASC');
+        break;
+      case MyCollectionSortType.RATING_DESC:
+        queryBuilder.orderBy('userGame.rating', 'DESC');
+        queryBuilder.addOrderBy('game.title', 'ASC');
+        break;
+      case MyCollectionSortType.STATUS_ASC:
+        queryBuilder.orderBy('userGame.status', 'ASC');
+        queryBuilder.addOrderBy('game.title', 'ASC');
+        break;
+      case MyCollectionSortType.STATUS_DESC:
+        queryBuilder.orderBy('userGame.status', 'DESC');
+        queryBuilder.addOrderBy('game.title', 'ASC');
+        break;
+      case MyCollectionSortType.ADDED_ASC:
+        queryBuilder.orderBy('userGame.addedAt', 'ASC');
+        break;
+      case MyCollectionSortType.ADDED_DESC:
+        queryBuilder.orderBy('userGame.addedAt', 'DESC');
+        break;
+      default:
+        queryBuilder.orderBy('userGame.addedAt', 'DESC');
+    }
+
     const [userGames, totalItems] = await queryBuilder
       .skip(skip)
       .take(limit)

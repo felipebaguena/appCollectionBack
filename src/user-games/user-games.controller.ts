@@ -12,26 +12,36 @@ import {
 } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
 import { UserGamesService } from './user-games.service';
+import { MyCollectionSortType } from './user-games.enum';
 
 @Controller('user-games')
 @UseGuards(AuthGuard('jwt'))
 export class UserGamesController {
   constructor(private readonly userGamesService: UserGamesService) {}
 
-  @Get('me')
+  @Post('collection')
   async getCollection(
     @Request() req,
-    @Query('page') page?: number,
-    @Query('limit') limit?: number,
-    @Query('sortBy') sortBy?: 'rating' | 'addedAt',
-    @Query('sortOrder') sortOrder?: 'ASC' | 'DESC',
+    @Body()
+    body: {
+      collection: {
+        page: number;
+        limit: number;
+        sortType: MyCollectionSortType;
+      };
+      filter?: {
+        search?: string;
+        platformIds?: number[];
+        genreIds?: number[];
+        developerIds?: number[];
+        yearRange?: {
+          start?: number;
+          end?: number;
+        };
+      };
+    },
   ) {
-    return this.userGamesService.getUserCollection(req.user.userId, {
-      page,
-      limit,
-      sortBy,
-      sortOrder,
-    });
+    return this.userGamesService.getUserCollection(req.user.userId, body);
   }
 
   @Post('me')
