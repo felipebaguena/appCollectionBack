@@ -23,6 +23,8 @@ import { Developer } from './developers/developer.entity';
 import { DevelopersModule } from './developers/developers.module';
 import { UserGame } from './user-games/user-game.entity';
 import { UserGamesModule } from './user-games/user-games.module';
+import { Article } from './articles/article.entity';
+import { ArticlesModule } from './articles/articles.module';
 
 @Module({
   imports: [
@@ -36,7 +38,17 @@ import { UserGamesModule } from './user-games/user-games.module';
       username: 'root',
       password: 'elculodealyna',
       database: 'nest_ddbb',
-      entities: [User, Role, Game, Image, Platform, Genre, Developer, UserGame],
+      entities: [
+        User,
+        Role,
+        Game,
+        Image,
+        Platform,
+        Genre,
+        Developer,
+        UserGame,
+        Article,
+      ],
       synchronize: true,
       logging: true,
       logger: 'advanced-console',
@@ -54,6 +66,7 @@ import { UserGamesModule } from './user-games/user-games.module';
       serveRoot: '/uploads',
     }),
     UserGamesModule,
+    ArticlesModule,
   ],
   controllers: [AppController, UsersnestController],
   providers: [AppService],

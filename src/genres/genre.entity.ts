@@ -1,5 +1,6 @@
 import { Entity, PrimaryGeneratedColumn, Column, ManyToMany } from 'typeorm';
 import { Game } from '../games/game.entity';
+import { Article } from '../articles/article.entity';
 
 @Entity()
 export class Genre {
@@ -14,4 +15,7 @@ export class Genre {
 
   @ManyToMany(() => Game, (game) => game.genres)
   games: Game[];
+
+  @ManyToMany(() => Article, (article) => article.relatedGenres)
+  articles: Article[];
 }
