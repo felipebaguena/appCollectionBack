@@ -222,8 +222,7 @@ export class ArticlesService {
       .leftJoinAndSelect('article.relatedDevelopers', 'developer')
       .leftJoinAndSelect('article.relatedGenres', 'genre')
       .where('game.id = :gameId', { gameId })
-      .andWhere('article.published = :published', { published: true })
-      .orderBy('article.publishedAt', 'DESC')
+      .orderBy('article.createdAt', 'DESC')
       .getMany();
   }
 

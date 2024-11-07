@@ -40,7 +40,23 @@ export class ArticlesController {
   }
 
   @Get()
-  findAll() {
+  async findAll(
+    @Query('published') published?: string,
+    @Query('gameId') gameId?: string,
+    @Query('platformId') platformId?: string,
+  ) {
+    if (gameId) {
+      return this.articlesService.findByGame(+gameId);
+    }
+
+    if (platformId) {
+      return this.articlesService.findByPlatform(+platformId);
+    }
+
+    if (published === 'true') {
+      return this.articlesService.findPublished();
+    }
+
     return this.articlesService.findAll();
   }
 
