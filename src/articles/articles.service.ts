@@ -238,4 +238,28 @@ export class ArticlesService {
       .orderBy('article.publishedAt', 'DESC')
       .getMany();
   }
+
+  async findByGenre(genreId: number): Promise<Article[]> {
+    return this.articleRepository
+      .createQueryBuilder('article')
+      .leftJoinAndSelect('article.relatedGames', 'game')
+      .leftJoinAndSelect('article.relatedPlatforms', 'platform')
+      .leftJoinAndSelect('article.relatedDevelopers', 'developer')
+      .leftJoinAndSelect('article.relatedGenres', 'genre')
+      .where('genre.id = :genreId', { genreId })
+      .orderBy('article.createdAt', 'DESC')
+      .getMany();
+  }
+
+  async findByDeveloper(developerId: number): Promise<Article[]> {
+    return this.articleRepository
+      .createQueryBuilder('article')
+      .leftJoinAndSelect('article.relatedGames', 'game')
+      .leftJoinAndSelect('article.relatedPlatforms', 'platform')
+      .leftJoinAndSelect('article.relatedDevelopers', 'developer')
+      .leftJoinAndSelect('article.relatedGenres', 'genre')
+      .where('developer.id = :developerId', { developerId })
+      .orderBy('article.createdAt', 'DESC')
+      .getMany();
+  }
 }

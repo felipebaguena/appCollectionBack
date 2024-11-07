@@ -44,6 +44,8 @@ export class ArticlesController {
     @Query('published') published?: string,
     @Query('gameId') gameId?: string,
     @Query('platformId') platformId?: string,
+    @Query('genreId') genreId?: string,
+    @Query('developerId') developerId?: string,
   ) {
     if (gameId) {
       return this.articlesService.findByGame(+gameId);
@@ -51,6 +53,14 @@ export class ArticlesController {
 
     if (platformId) {
       return this.articlesService.findByPlatform(+platformId);
+    }
+
+    if (genreId) {
+      return this.articlesService.findByGenre(+genreId);
+    }
+
+    if (developerId) {
+      return this.articlesService.findByDeveloper(+developerId);
     }
 
     if (published === 'true') {
