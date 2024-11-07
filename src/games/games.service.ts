@@ -25,6 +25,8 @@ export class GamesService {
     private genreRepository: Repository<Genre>,
     @InjectRepository(Developer)
     private developerRepository: Repository<Developer>,
+    @InjectRepository(UserGame)
+    private userGamesRepository: Repository<UserGame>,
   ) {}
 
   async create(
@@ -179,14 +181,51 @@ export class GamesService {
     await this.gamesRepository.remove(game);
   }
 
-  async findOneWithImages(id: number): Promise<Game> {
-    const game = await this.gamesRepository.findOne({
-      where: { id },
-      relations: ['images', 'platforms', 'genres', 'developers'],
-    });
+  async findOneWithImages(
+    id: number,
+    userId?: number,
+  ): Promise<Game & { inCollection?: boolean }> {
+    const queryBuilder = this.gamesRepository
+      .createQueryBuilder('game')
+      .leftJoinAndSelect('game.images', 'image')
+      .leftJoinAndSelect('game.platforms', 'platform')
+      .leftJoinAndSelect('game.genres', 'genre')
+      .leftJoinAndSelect('game.developers', 'developer');
+
+    if (userId) {
+      queryBuilder
+        .leftJoin(
+          UserGame,
+          'userGame',
+          'userGame.gameId = game.id AND userGame.userId = :userId',
+          { userId },
+        )
+        .addSelect(
+          'CASE WHEN userGame.id IS NOT NULL THEN true ELSE false END',
+          'inCollection',
+        );
+    }
+
+    queryBuilder.where('game.id = :id', { id });
+
+    const game = await queryBuilder.getOne();
 
     if (!game) {
       throw new NotFoundException('Juego no encontrado');
+    }
+
+    // Si hay userId, añadimos la propiedad inCollection
+    if (userId) {
+      const userGame = await this.userGamesRepository
+        .createQueryBuilder('userGame')
+        .where('userGame.gameId = :gameId', { gameId: id })
+        .andWhere('userGame.userId = :userId', { userId })
+        .getOne();
+
+      return {
+        ...game,
+        inCollection: Boolean(userGame),
+      };
     }
 
     return game;

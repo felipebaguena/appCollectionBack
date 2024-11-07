@@ -53,8 +53,10 @@ export class GamesController {
   }
 
   @Get(':id')
-  findOne(@Param('id') id: string) {
-    return this.gamesService.findOneWithImages(+id);
+  @UseGuards(OptionalJwtGuard)
+  async findOne(@Param('id') id: string, @Request() req) {
+    const userId = req.user?.userId || null;
+    return this.gamesService.findOneWithImages(+id, userId);
   }
 
   @Put(':id')
