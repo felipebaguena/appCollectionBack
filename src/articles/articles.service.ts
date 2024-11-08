@@ -7,6 +7,7 @@ import { Platform } from '../platforms/platform.entity';
 import { Developer } from '../developers/developer.entity';
 import { Genre } from '../genres/genre.entity';
 import { ArticleTemplate } from '../article-templates/article-template.entity';
+import { PublishedStatus } from './articles.enum';
 
 @Injectable()
 export class ArticlesService {
@@ -305,6 +306,7 @@ export class ArticlesService {
       platformIds?: number[];
       genreIds?: number[];
       developerIds?: number[];
+      gameIds?: number[];
       creationDateRange?: {
         start?: string;
         end?: string;
@@ -313,7 +315,7 @@ export class ArticlesService {
         start?: string;
         end?: string;
       } | null;
-      published?: boolean;
+      publishedStatus?: PublishedStatus;
     };
   }): Promise<{ data: Article[]; totalItems: number; totalPages: number }> {
     const { dataTable, filter } = options;
@@ -359,6 +361,13 @@ export class ArticlesService {
       });
     }
 
+    // Filtro por juegos
+    if (filter?.gameIds && filter.gameIds.length > 0) {
+      queryBuilder.andWhere('game.id IN (:...gameIds)', {
+        gameIds: filter.gameIds,
+      });
+    }
+
     // Filtro por rango de fecha de creación
     if (filter?.creationDateRange?.start && filter?.creationDateRange?.end) {
       const startDate = new Date(filter.creationDateRange.start);
@@ -390,10 +399,20 @@ export class ArticlesService {
     }
 
     // Filtro por estado de publicación
-    if (filter?.published !== undefined) {
-      queryBuilder.andWhere('article.published = :published', {
-        published: filter.published,
-      });
+    if (filter?.publishedStatus) {
+      switch (filter.publishedStatus) {
+        case PublishedStatus.PUBLISHED:
+          queryBuilder.andWhere('article.published = :published', {
+            published: true,
+          });
+          break;
+        case PublishedStatus.UNPUBLISHED:
+          queryBuilder.andWhere('article.published = :published', {
+            published: false,
+          });
+          break;
+        // Para PublishedStatus.ALL no necesitamos añadir ningún filtro
+      }
     }
 
     // Ordenación

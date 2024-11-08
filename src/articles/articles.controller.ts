@@ -16,7 +16,7 @@ import { ArticlesService } from './articles.service';
 import { Article } from './article.entity';
 import { RolesGuard } from '../guards/roles.guard';
 import { Roles } from '../guards/roles.decorator';
-import { OptionalJwtGuard } from '../auth/optional-jwt.guard';
+import { PublishedStatus } from './articles.enum';
 
 @Controller('articles')
 export class ArticlesController {
@@ -131,6 +131,7 @@ export class ArticlesController {
         platformIds?: number[];
         genreIds?: number[];
         developerIds?: number[];
+        gameIds?: number[];
         creationDateRange?: {
           start?: string;
           end?: string;
@@ -139,7 +140,7 @@ export class ArticlesController {
           start?: string;
           end?: string;
         } | null;
-        published?: boolean;
+        publishedStatus?: PublishedStatus;
       };
     },
   ) {
