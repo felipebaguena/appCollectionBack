@@ -5,12 +5,15 @@ import {
   ManyToMany,
   JoinTable,
   OneToMany,
+  ManyToOne,
+  JoinColumn,
 } from 'typeorm';
 import { Game } from '../games/game.entity';
 import { Platform } from '../platforms/platform.entity';
 import { Genre } from '../genres/genre.entity';
 import { Developer } from '../developers/developer.entity';
 import { ArticleImage } from '../article-images/article-image.entity';
+import { ArticleTemplate } from '../article-templates/article-template.entity';
 
 @Entity()
 export class Article {
@@ -53,4 +56,11 @@ export class Article {
 
   @Column({ nullable: true })
   coverImageId: number;
+
+  @ManyToOne(() => ArticleTemplate, (template) => template.articles)
+  @JoinColumn({ name: 'template_id' })
+  template: ArticleTemplate;
+
+  @Column({ name: 'template_id', nullable: true })
+  templateId: number;
 }

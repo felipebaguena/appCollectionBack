@@ -10,10 +10,18 @@ import { Developer } from '../developers/developer.entity';
 import { JwtModule } from '@nestjs/jwt';
 import { RolesGuard } from '../guards/roles.guard';
 import { ConfigModule, ConfigService } from '@nestjs/config';
+import { ArticleTemplate } from 'src/article-templates/article-template.entity';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([Article, Game, Platform, Genre, Developer]),
+    TypeOrmModule.forFeature([
+      Article,
+      Game,
+      Platform,
+      Developer,
+      Genre,
+      ArticleTemplate,
+    ]),
     JwtModule.registerAsync({
       imports: [ConfigModule],
       useFactory: async (configService: ConfigService) => ({

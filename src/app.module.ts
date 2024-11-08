@@ -27,6 +27,8 @@ import { Article } from './articles/article.entity';
 import { ArticlesModule } from './articles/articles.module';
 import { ArticleImage } from './article-images/article-image.entity';
 import { ArticleImagesModule } from './article-images/article-images.module';
+import { ArticleTemplatesModule } from './article-templates/article-templates.module';
+import { ArticleTemplate } from './article-templates/article-template.entity';
 
 @Module({
   imports: [
@@ -51,6 +53,7 @@ import { ArticleImagesModule } from './article-images/article-images.module';
         UserGame,
         Article,
         ArticleImage,
+        ArticleTemplate,
       ],
       synchronize: true,
       logging: true,
@@ -71,6 +74,7 @@ import { ArticleImagesModule } from './article-images/article-images.module';
     UserGamesModule,
     ArticlesModule,
     ArticleImagesModule,
+    ArticleTemplatesModule,
   ],
   controllers: [AppController, UsersnestController],
   providers: [AppService],

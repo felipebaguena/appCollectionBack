@@ -6,6 +6,7 @@ import { Game } from '../games/game.entity';
 import { Platform } from '../platforms/platform.entity';
 import { Developer } from '../developers/developer.entity';
 import { Genre } from '../genres/genre.entity';
+import { ArticleTemplate } from '../article-templates/article-template.entity';
 
 @Injectable()
 export class ArticlesService {
@@ -22,6 +23,8 @@ export class ArticlesService {
     private developerRepository: Repository<Developer>,
     @InjectRepository(Genre)
     private genreRepository: Repository<Genre>,
+    @InjectRepository(ArticleTemplate)
+    private templateRepository: Repository<ArticleTemplate>,
   ) {}
 
   async create(
@@ -30,6 +33,7 @@ export class ArticlesService {
       relatedPlatforms?: number[];
       relatedDevelopers?: number[];
       relatedGenres?: number[];
+      templateId?: number;
     },
   ): Promise<Article> {
     const {
@@ -37,10 +41,21 @@ export class ArticlesService {
       relatedPlatforms = [],
       relatedDevelopers = [],
       relatedGenres = [],
+      templateId,
       ...articleData
     } = article;
 
     let newArticle = this.articleRepository.create(articleData);
+
+    if (templateId) {
+      const template = await this.templateRepository.findOne({
+        where: { id: templateId },
+      });
+      if (!template) {
+        throw new NotFoundException('Plantilla no encontrada');
+      }
+      newArticle.template = template;
+    }
 
     if (relatedGames.length) {
       const games = await this.gameRepository.findBy({
@@ -92,6 +107,7 @@ export class ArticlesService {
         'relatedPlatforms',
         'relatedDevelopers',
         'relatedGenres',
+        'template',
       ],
       order: {
         createdAt: 'DESC',
@@ -107,6 +123,7 @@ export class ArticlesService {
         'relatedPlatforms',
         'relatedDevelopers',
         'relatedGenres',
+        'template',
       ],
     });
 
@@ -124,6 +141,7 @@ export class ArticlesService {
       relatedPlatforms?: number[];
       relatedDevelopers?: number[];
       relatedGenres?: number[];
+      templateId?: number;
     },
   ): Promise<Article> {
     const article = await this.findOne(id);
@@ -133,8 +151,19 @@ export class ArticlesService {
       relatedPlatforms,
       relatedDevelopers,
       relatedGenres,
+      templateId,
       ...otherData
     } = articleData;
+
+    if (templateId) {
+      const template = await this.templateRepository.findOne({
+        where: { id: templateId },
+      });
+      if (!template) {
+        throw new NotFoundException('Plantilla no encontrada');
+      }
+      article.template = template;
+    }
 
     if (relatedGames) {
       const games = await this.gameRepository.findBy({
@@ -207,6 +236,7 @@ export class ArticlesService {
         'relatedPlatforms',
         'relatedDevelopers',
         'relatedGenres',
+        'template',
       ],
       order: {
         publishedAt: 'DESC',

@@ -34,6 +34,7 @@ export class ArticlesController {
       relatedPlatforms?: number[];
       relatedGenres?: number[];
       relatedDevelopers?: number[];
+      templateId?: number;
     },
   ) {
     return this.articlesService.create(article);
@@ -86,6 +87,7 @@ export class ArticlesController {
       relatedPlatforms?: number[];
       relatedGenres?: number[];
       relatedDevelopers?: number[];
+      templateId?: number;
     },
   ) {
     return this.articlesService.update(+id, articleData);
