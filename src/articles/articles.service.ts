@@ -292,4 +292,130 @@ export class ArticlesService {
       .orderBy('article.createdAt', 'DESC')
       .getMany();
   }
+
+  async getArticlesForDataTable(options: {
+    dataTable: {
+      page: number;
+      limit: number;
+      sortField?: string;
+      sortOrder?: 'ASC' | 'DESC';
+    };
+    filter?: {
+      search?: string;
+      platformIds?: number[];
+      genreIds?: number[];
+      developerIds?: number[];
+      creationDateRange?: {
+        start?: string;
+        end?: string;
+      } | null;
+      publishedDateRange?: {
+        start?: string;
+        end?: string;
+      } | null;
+      published?: boolean;
+    };
+  }): Promise<{ data: Article[]; totalItems: number; totalPages: number }> {
+    const { dataTable, filter } = options;
+    const { page, limit, sortField, sortOrder } = dataTable;
+    const skip = (page - 1) * limit;
+
+    const queryBuilder = this.articleRepository
+      .createQueryBuilder('article')
+      .leftJoinAndSelect('article.relatedPlatforms', 'platform')
+      .leftJoinAndSelect('article.relatedGenres', 'genre')
+      .leftJoinAndSelect('article.relatedDevelopers', 'developer')
+      .leftJoinAndSelect('article.relatedGames', 'game')
+      .leftJoinAndSelect('article.template', 'template');
+
+    // Filtro por búsqueda
+    if (filter?.search) {
+      queryBuilder.andWhere(
+        '(article.title LIKE :search OR article.content LIKE :search)',
+        {
+          search: `%${filter.search}%`,
+        },
+      );
+    }
+
+    // Filtro por plataformas
+    if (filter?.platformIds && filter.platformIds.length > 0) {
+      queryBuilder.andWhere('platform.id IN (:...platformIds)', {
+        platformIds: filter.platformIds,
+      });
+    }
+
+    // Filtro por géneros
+    if (filter?.genreIds && filter.genreIds.length > 0) {
+      queryBuilder.andWhere('genre.id IN (:...genreIds)', {
+        genreIds: filter.genreIds,
+      });
+    }
+
+    // Filtro por desarrolladores
+    if (filter?.developerIds && filter.developerIds.length > 0) {
+      queryBuilder.andWhere('developer.id IN (:...developerIds)', {
+        developerIds: filter.developerIds,
+      });
+    }
+
+    // Filtro por rango de fecha de creación
+    if (filter?.creationDateRange?.start && filter?.creationDateRange?.end) {
+      const startDate = new Date(filter.creationDateRange.start);
+      const endDate = new Date(filter.creationDateRange.end);
+      endDate.setHours(23, 59, 59, 999);
+
+      queryBuilder.andWhere(
+        'article.createdAt BETWEEN :creationStartDate AND :creationEndDate',
+        {
+          creationStartDate: startDate.toISOString(),
+          creationEndDate: endDate.toISOString(),
+        },
+      );
+    }
+
+    // Filtro por rango de fecha de publicación
+    if (filter?.publishedDateRange?.start && filter?.publishedDateRange?.end) {
+      const startDate = new Date(filter.publishedDateRange.start);
+      const endDate = new Date(filter.publishedDateRange.end);
+      endDate.setHours(23, 59, 59, 999);
+
+      queryBuilder.andWhere(
+        'article.publishedAt BETWEEN :publishedStartDate AND :publishedEndDate',
+        {
+          publishedStartDate: startDate.toISOString(),
+          publishedEndDate: endDate.toISOString(),
+        },
+      );
+    }
+
+    // Filtro por estado de publicación
+    if (filter?.published !== undefined) {
+      queryBuilder.andWhere('article.published = :published', {
+        published: filter.published,
+      });
+    }
+
+    // Ordenación
+    if (sortField && sortOrder) {
+      queryBuilder.orderBy(`article.${sortField}`, sortOrder);
+    } else {
+      // Ordenación por defecto
+      queryBuilder.orderBy('article.createdAt', 'DESC');
+    }
+
+    // Obtener total y datos paginados
+    const [articles, totalItems] = await queryBuilder
+      .skip(skip)
+      .take(limit)
+      .getManyAndCount();
+
+    const totalPages = Math.ceil(totalItems / limit);
+
+    return {
+      data: articles,
+      totalItems,
+      totalPages,
+    };
+  }
 }

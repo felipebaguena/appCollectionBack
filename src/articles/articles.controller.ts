@@ -113,4 +113,36 @@ export class ArticlesController {
   remove(@Param('id') id: string) {
     return this.articlesService.remove(+id);
   }
+
+  @Post('datatable')
+  @UseGuards(AuthGuard('jwt'), RolesGuard)
+  @Roles('SUPERUSER')
+  async getArticlesForDataTable(
+    @Body()
+    body: {
+      dataTable: {
+        page: number;
+        limit: number;
+        sortField?: string;
+        sortOrder?: 'ASC' | 'DESC';
+      };
+      filter?: {
+        search?: string;
+        platformIds?: number[];
+        genreIds?: number[];
+        developerIds?: number[];
+        creationDateRange?: {
+          start?: string;
+          end?: string;
+        } | null;
+        publishedDateRange?: {
+          start?: string;
+          end?: string;
+        } | null;
+        published?: boolean;
+      };
+    },
+  ) {
+    return this.articlesService.getArticlesForDataTable(body);
+  }
 }
