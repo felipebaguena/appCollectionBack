@@ -4,11 +4,13 @@ import {
   PrimaryGeneratedColumn,
   ManyToMany,
   JoinTable,
+  OneToMany,
 } from 'typeorm';
 import { Game } from '../games/game.entity';
 import { Platform } from '../platforms/platform.entity';
 import { Genre } from '../genres/genre.entity';
 import { Developer } from '../developers/developer.entity';
+import { ArticleImage } from '../article-images/article-image.entity';
 
 @Entity()
 export class Article {
@@ -45,4 +47,10 @@ export class Article {
   @ManyToMany(() => Genre, (genre) => genre.articles)
   @JoinTable()
   relatedGenres: Genre[];
+
+  @OneToMany(() => ArticleImage, (image) => image.article)
+  images: ArticleImage[];
+
+  @Column({ nullable: true })
+  coverImageId: number;
 }

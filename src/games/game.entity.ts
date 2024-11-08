@@ -11,6 +11,7 @@ import { Platform } from '../platforms/platform.entity';
 import { Genre } from '../genres/genre.entity';
 import { Developer } from '../developers/developer.entity';
 import { Article } from '../articles/article.entity';
+import { ArticleImage } from '../article-images/article-image.entity';
 
 @Entity()
 export class Game {
@@ -49,4 +50,7 @@ export class Game {
 
   @ManyToMany(() => Article, (article) => article.relatedGames)
   articles: Article[];
+
+  @OneToMany(() => ArticleImage, (image) => image.game)
+  articleImages: ArticleImage[];
 }
