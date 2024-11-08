@@ -52,6 +52,14 @@ export class GamesController {
     return this.gamesService.getHomeGames(limit);
   }
 
+  @Get('search')
+  async searchGames(@Query('title') title: string) {
+    if (!title) {
+      return [];
+    }
+    return this.gamesService.searchGames(title);
+  }
+
   @Get(':id')
   @UseGuards(OptionalJwtGuard)
   async findOne(@Param('id') id: string, @Request() req) {

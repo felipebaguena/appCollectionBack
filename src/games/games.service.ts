@@ -513,4 +513,19 @@ export class GamesService {
       totalPages: Math.ceil(totalItems / limit),
     };
   }
+
+  async searchGames(title: string): Promise<Game[]> {
+    if (!title) {
+      return []; // Si no hay título, devolvemos array vacío
+    }
+
+    const queryBuilder = this.gamesRepository
+      .createQueryBuilder('game')
+      .leftJoinAndSelect('game.platforms', 'platform')
+      .leftJoinAndSelect('game.images', 'image')
+      .where('game.title LIKE :title', { title: `%${title}%` })
+      .orderBy('game.title', 'ASC');
+
+    return queryBuilder.getMany();
+  }
 }
