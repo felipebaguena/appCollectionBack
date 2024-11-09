@@ -23,6 +23,9 @@ export class Article {
   @Column()
   title: string;
 
+  @Column({ nullable: true })
+  subtitle: string;
+
   @Column('text')
   content: string;
 

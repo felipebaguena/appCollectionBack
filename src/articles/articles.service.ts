@@ -333,7 +333,7 @@ export class ArticlesService {
     // Filtro por búsqueda
     if (filter?.search) {
       queryBuilder.andWhere(
-        '(article.title LIKE :search OR article.content LIKE :search)',
+        '(article.title LIKE :search OR article.subtitle LIKE :search OR article.content LIKE :search)',
         {
           search: `%${filter.search}%`,
         },
