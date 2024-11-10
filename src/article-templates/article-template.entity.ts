@@ -18,6 +18,9 @@ export class ArticleTemplate {
   @Column({ default: true })
   isActive: boolean;
 
+  @Column({ default: 0 })
+  imageCount: number;
+
   @OneToMany(() => Article, (article) => article.template)
   articles: Article[];
 }
