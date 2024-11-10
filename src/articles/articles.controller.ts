@@ -93,6 +93,16 @@ export class ArticlesController {
     return this.articlesService.update(+id, articleData);
   }
 
+  @Put(':id/images')
+  @UseGuards(AuthGuard('jwt'), RolesGuard)
+  @Roles('SUPERUSER')
+  async updateArticleImages(
+    @Param('id') id: string,
+    @Body() body: { imageIds: number[] },
+  ) {
+    return this.articlesService.updateImages(+id, body.imageIds);
+  }
+
   @Put(':id/publish')
   @UseGuards(AuthGuard('jwt'), RolesGuard)
   @Roles('SUPERUSER')

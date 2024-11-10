@@ -37,4 +37,10 @@ export class ArticleImage {
   @ManyToOne(() => Game, (game) => game.articleImages, { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'game_id' })
   game: Game;
+
+  @Column({ default: true })
+  isActive: boolean;
+
+  @Column({ default: 0 })
+  order: number;
 }

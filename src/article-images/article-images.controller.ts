@@ -8,6 +8,7 @@ import {
   UseInterceptors,
   UploadedFile,
   NotFoundException,
+  Delete,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { extname } from 'path';
@@ -73,5 +74,49 @@ export class ArticleImagesController {
   @Get(':id')
   async findOne(@Param('id') id: string) {
     return this.articleImagesService.findOne(+id);
+  }
+
+  @Delete(':id')
+  @UseGuards(AuthGuard('jwt'), RolesGuard)
+  @Roles('SUPERUSER')
+  async remove(@Param('id') id: string) {
+    // Primero obtener la imagen para verificar que existe
+    const image = await this.articleImagesService.findOne(+id);
+
+    // Si existe, eliminar el archivo físico
+    const fs = require('fs');
+    if (fs.existsSync(image.path)) {
+      fs.unlinkSync(image.path);
+    }
+
+    // Eliminar el registro de la base de datos
+    return this.articleImagesService.remove(+id);
+  }
+
+  @Post('game/:gameId/upload')
+  @UseGuards(AuthGuard('jwt'), RolesGuard)
+  @Roles('SUPERUSER')
+  @UseInterceptors(
+    FileInterceptor('image', {
+      storage: diskStorage({
+        destination: './uploads/article-images',
+        filename: (req, file, cb) => {
+          const uniqueSuffix =
+            Date.now() + '-' + Math.round(Math.random() * 1e9);
+          const ext = extname(file.originalname);
+          cb(null, `${file.fieldname}-${uniqueSuffix}${ext}`);
+        },
+      }),
+    }),
+  )
+  async uploadGameImage(
+    @UploadedFile() file: Express.Multer.File,
+    @Param('gameId') gameId: string,
+  ) {
+    return this.articleImagesService.createGameImage({
+      filename: file.filename,
+      path: file.path,
+      gameId: +gameId,
+    });
   }
 }

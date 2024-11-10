@@ -3,6 +3,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { ArticleImage } from './article-image.entity';
 import { Article } from '../articles/article.entity';
+import { Game } from '../games/game.entity';
 
 @Injectable()
 export class ArticleImagesService {
@@ -11,6 +12,8 @@ export class ArticleImagesService {
     private articleImageRepository: Repository<ArticleImage>,
     @InjectRepository(Article)
     private articleRepository: Repository<Article>,
+    @InjectRepository(Game)
+    private gameRepository: Repository<Game>,
   ) {}
 
   async create(imageData: Partial<ArticleImage>): Promise<ArticleImage> {
@@ -75,5 +78,25 @@ export class ArticleImagesService {
     }
 
     return image;
+  }
+
+  async createGameImage(
+    imageData: Partial<ArticleImage>,
+  ): Promise<ArticleImage> {
+    // Verificar que el juego existe
+    const gameExists = await this.gameRepository.findOne({
+      where: { id: imageData.gameId },
+    });
+
+    if (!gameExists) {
+      throw new NotFoundException(`Game with ID ${imageData.gameId} not found`);
+    }
+
+    const image = this.articleImageRepository.create({
+      ...imageData,
+      articleId: null, // Explícitamente establecemos articleId como null
+    });
+
+    return this.articleImageRepository.save(image);
   }
 }

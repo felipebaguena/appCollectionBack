@@ -1,4 +1,9 @@
-import { Injectable, Logger, NotFoundException } from '@nestjs/common';
+import {
+  Injectable,
+  Logger,
+  NotFoundException,
+  BadRequestException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, In } from 'typeorm';
 import { Article } from './article.entity';
@@ -8,6 +13,7 @@ import { Developer } from '../developers/developer.entity';
 import { Genre } from '../genres/genre.entity';
 import { ArticleTemplate } from '../article-templates/article-template.entity';
 import { PublishedStatus } from './articles.enum';
+import { ArticleImage } from '../article-images/article-image.entity';
 
 @Injectable()
 export class ArticlesService {
@@ -26,6 +32,8 @@ export class ArticlesService {
     private genreRepository: Repository<Genre>,
     @InjectRepository(ArticleTemplate)
     private templateRepository: Repository<ArticleTemplate>,
+    @InjectRepository(ArticleImage)
+    private articleImageRepository: Repository<ArticleImage>,
   ) {}
 
   async create(
@@ -436,5 +444,54 @@ export class ArticlesService {
       totalItems,
       totalPages,
     };
+  }
+
+  async updateImages(articleId: number, imageIds: number[]): Promise<Article> {
+    const article = await this.findOne(articleId);
+
+    // Obtener los IDs de los juegos relacionados con el artículo
+    const relatedGameIds = article.relatedGames.map((game) => game.id);
+
+    // Verificar que las imágenes existen y pertenecen a los juegos relacionados
+    const images = await this.articleImageRepository.find({
+      where: {
+        id: In(imageIds),
+        gameId: In(relatedGameIds),
+      },
+    });
+
+    if (images.length !== imageIds.length) {
+      throw new NotFoundException(
+        'Una o más imágenes no fueron encontradas o no pertenecen a los juegos relacionados',
+      );
+    }
+
+    // Verificar que el número de imágenes coincide con el requerido por la plantilla
+    if (article.template && article.template.imageCount !== imageIds.length) {
+      throw new BadRequestException(
+        `La plantilla "${article.template.name}" requiere exactamente ${article.template.imageCount} imágenes`,
+      );
+    }
+
+    // Primero, desvinculamos todas las imágenes actuales del artículo
+    await this.articleImageRepository.update(
+      { articleId },
+      { articleId: null },
+    );
+
+    // Luego, actualizamos las nuevas imágenes para que pertenezcan a este artículo
+    await Promise.all(
+      imageIds.map((imageId, index) =>
+        this.articleImageRepository.update(
+          { id: imageId },
+          {
+            articleId: articleId,
+            order: index + 1,
+          },
+        ),
+      ),
+    );
+
+    return this.findOne(articleId);
   }
 }
