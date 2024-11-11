@@ -336,7 +336,13 @@ export class ArticlesService {
       .leftJoinAndSelect('article.relatedGenres', 'genre')
       .leftJoinAndSelect('article.relatedDevelopers', 'developer')
       .leftJoinAndSelect('article.relatedGames', 'game')
-      .leftJoinAndSelect('article.template', 'template');
+      .leftJoinAndSelect('article.template', 'template')
+      .leftJoinAndMapOne(
+        'article.coverImage',
+        ArticleImage,
+        'coverImage',
+        'coverImage.id = article.coverImageId',
+      );
 
     // Filtro por búsqueda
     if (filter?.search) {
@@ -437,12 +443,26 @@ export class ArticlesService {
       .take(limit)
       .getManyAndCount();
 
-    const totalPages = Math.ceil(totalItems / limit);
+    // Transformar los resultados para tener la estructura deseada
+    const transformedArticles = articles.map((article) => {
+      const { coverImageId, ...rest } = article as any;
+      const coverImage = article['coverImage'];
+
+      return {
+        ...rest,
+        coverImage: coverImage
+          ? {
+              id: coverImage.id,
+              path: coverImage.path,
+            }
+          : null,
+      };
+    });
 
     return {
-      data: articles,
+      data: transformedArticles as Article[],
       totalItems,
-      totalPages,
+      totalPages: Math.ceil(totalItems / limit),
     };
   }
 

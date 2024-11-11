@@ -1,6 +1,6 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { Repository, In, Not, IsNull } from 'typeorm';
 import { ArticleImage } from './article-image.entity';
 import { Article } from '../articles/article.entity';
 import { Game } from '../games/game.entity';
@@ -36,27 +36,34 @@ export class ArticleImagesService {
   }
 
   async setCover(articleId: number, imageId: number): Promise<void> {
-    // Verifica que la imagen existe y pertenece al artículo
+    // Primero obtenemos el artículo para saber a qué juego(s) está asociado
+    const article = await this.articleRepository.findOne({
+      where: { id: articleId },
+      relations: ['relatedGames'],
+    });
+
+    if (!article) {
+      throw new NotFoundException(`Article with ID ${articleId} not found`);
+    }
+
+    // Obtenemos los IDs de los juegos relacionados
+    const gameIds = article.relatedGames.map((game) => game.id);
+
+    // Verificar que la imagen existe y pertenece a alguno de los juegos relacionados
     const image = await this.articleImageRepository.findOne({
-      where: { id: imageId, articleId },
+      where: {
+        id: imageId,
+        gameId: In(gameIds),
+      },
     });
 
     if (!image) {
       throw new NotFoundException(
-        `Image not found or doesn't belong to this article`,
+        `Image not found or doesn't belong to any of the related games`,
       );
     }
 
-    // Resetea la portada actual si existe
-    await this.articleImageRepository.update({ articleId }, { isCover: false });
-
-    // Establece la nueva portada en la imagen
-    await this.articleImageRepository.update(
-      { id: imageId },
-      { isCover: true },
-    );
-
-    // Actualiza el coverImageId en el artículo
+    // Actualiza SOLO el coverImageId del artículo específico
     await this.articleRepository.update(
       { id: articleId },
       { coverImageId: imageId },

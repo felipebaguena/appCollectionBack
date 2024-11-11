@@ -61,14 +61,11 @@ export class ArticleImagesController {
     return this.articleImagesService.findByGame(+gameId);
   }
 
-  @Post(':id/set-cover')
+  @Post('set-cover')
   @UseGuards(AuthGuard('jwt'), RolesGuard)
   @Roles('SUPERUSER')
-  async setCover(
-    @Param('id') id: string,
-    @Body('articleId') articleId: number,
-  ) {
-    return this.articleImagesService.setCover(articleId, +id);
+  async setCover(@Body() body: { articleId: number; imageId: number }) {
+    return this.articleImagesService.setCover(body.articleId, body.imageId);
   }
 
   @Get(':id')
