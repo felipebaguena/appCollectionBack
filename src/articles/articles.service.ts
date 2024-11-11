@@ -579,12 +579,12 @@ export class ArticlesService {
       );
     }
 
-    // Primero, eliminamos todas las relaciones existentes
+    // Primero, eliminamos todas las relaciones existentes del artículo
     await this.articleImageRepository
       .createQueryBuilder()
-      .relation(ArticleImage, 'articles')
-      .of(images)
-      .remove(articleId);
+      .relation(Article, 'images')
+      .of(articleId)
+      .remove(await this.articleImageRepository.find());
 
     // Luego, creamos las nuevas relaciones con el orden correcto
     await Promise.all(
@@ -593,9 +593,9 @@ export class ArticlesService {
           // Crear la relación ManyToMany
           this.articleImageRepository
             .createQueryBuilder()
-            .relation(ArticleImage, 'articles')
-            .of(imageId)
-            .add(articleId),
+            .relation(Article, 'images')
+            .of(articleId)
+            .add(imageId),
           // Actualizar el orden
           this.articleImageRepository.update(
             { id: imageId },
