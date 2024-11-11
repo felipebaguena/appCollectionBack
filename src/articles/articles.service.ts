@@ -164,22 +164,51 @@ export class ArticlesService {
   }
 
   async findOne(id: number): Promise<Article> {
-    const article = await this.articleRepository.findOne({
-      where: { id },
-      relations: [
-        'relatedGames',
-        'relatedPlatforms',
-        'relatedDevelopers',
-        'relatedGenres',
-        'template',
-      ],
-    });
+    const article = await this.articleRepository
+      .createQueryBuilder('article')
+      .leftJoinAndSelect('article.relatedGames', 'relatedGames')
+      .leftJoinAndSelect('article.relatedPlatforms', 'relatedPlatforms')
+      .leftJoinAndSelect('article.relatedDevelopers', 'relatedDevelopers')
+      .leftJoinAndSelect('article.relatedGenres', 'relatedGenres')
+      .leftJoinAndSelect('article.template', 'template')
+      .leftJoinAndMapOne(
+        'article.coverImage',
+        ArticleImage,
+        'coverImage',
+        'coverImage.id = article.coverImageId',
+      )
+      .leftJoinAndMapMany(
+        'article.contentImages',
+        ArticleImage,
+        'contentImages',
+        'contentImages.articleId = article.id AND contentImages.id != article.coverImageId',
+      )
+      .where('article.id = :id', { id })
+      .orderBy('contentImages.order', 'ASC')
+      .getOne();
 
     if (!article) {
       throw new NotFoundException(`Artículo con ID ${id} no encontrado`);
     }
 
-    return article;
+    // Transformar el resultado para tener la estructura deseada
+    const transformedArticle = {
+      ...article,
+      coverImage: article['coverImage']
+        ? {
+            id: article['coverImage'].id,
+            path: article['coverImage'].path,
+          }
+        : null,
+      contentImages: article['contentImages']
+        ? article['contentImages'].map((img) => ({
+            id: img.id,
+            path: img.path,
+          }))
+        : [],
+    };
+
+    return transformedArticle as Article;
   }
 
   async update(
