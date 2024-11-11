@@ -54,7 +54,9 @@ export class Article {
   @JoinTable()
   relatedGenres: Genre[];
 
-  @OneToMany(() => ArticleImage, (image) => image.article)
+  @OneToMany(() => ArticleImage, (image) => image.article, {
+    onDelete: 'SET NULL',
+  })
   images: ArticleImage[];
 
   @Column({ nullable: true })

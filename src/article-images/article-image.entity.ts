@@ -29,12 +29,12 @@ export class ArticleImage {
   gameId: number;
 
   @ManyToOne(() => Article, (article) => article.images, {
-    onDelete: 'CASCADE',
+    onDelete: 'SET NULL',
   })
   @JoinColumn({ name: 'article_id' })
   article: Article;
 
-  @ManyToOne(() => Game, (game) => game.articleImages, { onDelete: 'CASCADE' })
+  @ManyToOne(() => Game, (game) => game.articleImages, { onDelete: 'SET NULL' })
   @JoinColumn({ name: 'game_id' })
   game: Game;
 
