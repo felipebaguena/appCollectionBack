@@ -35,6 +35,8 @@ export class ArticlesController {
       relatedGenres?: number[];
       relatedDevelopers?: number[];
       templateId?: number;
+      coverImageId?: number;
+      contentImageIds?: number[];
     },
   ) {
     return this.articlesService.create(article);

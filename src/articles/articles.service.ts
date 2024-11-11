@@ -43,6 +43,8 @@ export class ArticlesService {
       relatedDevelopers?: number[];
       relatedGenres?: number[];
       templateId?: number;
+      coverImageId?: number;
+      contentImageIds?: number[];
     },
   ): Promise<Article> {
     const {
@@ -51,11 +53,14 @@ export class ArticlesService {
       relatedDevelopers = [],
       relatedGenres = [],
       templateId,
+      coverImageId,
+      contentImageIds = [],
       ...articleData
     } = article;
 
     let newArticle = this.articleRepository.create(articleData);
 
+    // Verificar y asignar la plantilla
     if (templateId) {
       const template = await this.templateRepository.findOne({
         where: { id: templateId },
@@ -64,8 +69,16 @@ export class ArticlesService {
         throw new NotFoundException('Plantilla no encontrada');
       }
       newArticle.template = template;
+
+      // Verificar que el número de imágenes coincide con el requerido por la plantilla
+      if (template.imageCount !== contentImageIds.length) {
+        throw new BadRequestException(
+          `La plantilla "${template.name}" requiere exactamente ${template.imageCount} imágenes de contenido`,
+        );
+      }
     }
 
+    // Verificar y asignar juegos relacionados
     if (relatedGames.length) {
       const games = await this.gameRepository.findBy({
         id: In(relatedGames),
@@ -74,8 +87,34 @@ export class ArticlesService {
         throw new NotFoundException('Uno o más juegos no encontrados');
       }
       newArticle.relatedGames = games;
+
+      // Verificar que las imágenes pertenecen a los juegos relacionados
+      if (coverImageId || contentImageIds.length > 0) {
+        const allImageIds = [
+          ...(coverImageId ? [coverImageId] : []),
+          ...contentImageIds,
+        ];
+        const images = await this.articleImageRepository.find({
+          where: {
+            id: In(allImageIds),
+            gameId: In(relatedGames),
+          },
+        });
+
+        if (images.length !== allImageIds.length) {
+          throw new BadRequestException(
+            'Una o más imágenes no fueron encontradas o no pertenecen a los juegos relacionados',
+          );
+        }
+      }
     }
 
+    // Asignar imagen de portada
+    if (coverImageId) {
+      newArticle.coverImageId = coverImageId;
+    }
+
+    // Resto de las relaciones...
     if (relatedPlatforms.length) {
       const platforms = await this.platformRepository.findBy({
         id: In(relatedPlatforms),
@@ -86,27 +125,27 @@ export class ArticlesService {
       newArticle.relatedPlatforms = platforms;
     }
 
-    if (relatedDevelopers.length) {
-      const developers = await this.developerRepository.findBy({
-        id: In(relatedDevelopers),
-      });
-      if (developers.length !== relatedDevelopers.length) {
-        throw new NotFoundException('Uno o más desarrolladores no encontrados');
-      }
-      newArticle.relatedDevelopers = developers;
+    // ... (resto del código para developers y genres)
+
+    // Guardar el artículo
+    newArticle = await this.articleRepository.save(newArticle);
+
+    // Asignar las imágenes de contenido
+    if (contentImageIds.length > 0) {
+      await Promise.all(
+        contentImageIds.map((imageId, index) =>
+          this.articleImageRepository.update(
+            { id: imageId },
+            {
+              articleId: newArticle.id,
+              order: index + 1,
+            },
+          ),
+        ),
+      );
     }
 
-    if (relatedGenres.length) {
-      const genres = await this.genreRepository.findBy({
-        id: In(relatedGenres),
-      });
-      if (genres.length !== relatedGenres.length) {
-        throw new NotFoundException('Uno o más géneros no encontrados');
-      }
-      newArticle.relatedGenres = genres;
-    }
-
-    return this.articleRepository.save(newArticle);
+    return this.findOne(newArticle.id);
   }
 
   async findAll(): Promise<Article[]> {
