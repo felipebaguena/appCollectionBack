@@ -132,15 +132,25 @@ export class ArticlesService {
 
     // Asignar las imágenes de contenido
     if (contentImageIds.length > 0) {
+      // En lugar de update, ahora usamos la relación ManyToMany
+      const images =
+        await this.articleImageRepository.findByIds(contentImageIds);
+
+      // Establecer el orden en la tabla de relación
       await Promise.all(
-        contentImageIds.map((imageId, index) =>
-          this.articleImageRepository.update(
-            { id: imageId },
-            {
-              articleId: newArticle.id,
-              order: index + 1,
-            },
-          ),
+        images.map((image, index) =>
+          this.articleImageRepository
+            .createQueryBuilder()
+            .relation(ArticleImage, 'articles')
+            .of(image)
+            .add(newArticle.id)
+            .then(() => {
+              // Actualizar el orden en una tabla separada o en metadatos
+              return this.articleImageRepository.update(
+                { id: image.id },
+                { order: index + 1 },
+              );
+            }),
         ),
       );
     }
@@ -177,21 +187,16 @@ export class ArticlesService {
         'coverImage',
         'coverImage.id = article.coverImageId',
       )
-      .leftJoinAndMapMany(
-        'article.contentImages',
-        ArticleImage,
-        'contentImages',
-        'contentImages.articleId = article.id AND contentImages.id != article.coverImageId',
-      )
+      .leftJoinAndSelect('article.images', 'images')
       .where('article.id = :id', { id })
-      .orderBy('contentImages.order', 'ASC')
+      .orderBy('images.order', 'ASC')
       .getOne();
 
     if (!article) {
       throw new NotFoundException(`Artículo con ID ${id} no encontrado`);
     }
 
-    // Transformar el resultado para tener la estructura deseada
+    // Transformar el resultado para mantener la estructura exacta que espera el frontend
     const transformedArticle = {
       ...article,
       coverImage: article['coverImage']
@@ -200,13 +205,17 @@ export class ArticlesService {
             path: article['coverImage'].path,
           }
         : null,
-      contentImages: article['contentImages']
-        ? article['contentImages'].map((img) => ({
-            id: img.id,
-            path: img.path,
-          }))
-        : [],
+      contentImages: (article['images'] || [])
+        .filter((img) => img.id !== article.coverImageId)
+        .sort((a, b) => a.order - b.order)
+        .map((img) => ({
+          id: img.id,
+          path: img.path,
+        })),
     };
+
+    // Eliminar la propiedad 'images' ya que no la necesitamos en la respuesta
+    delete (transformedArticle as any).images;
 
     return transformedArticle as Article;
   }
@@ -405,6 +414,7 @@ export class ArticlesService {
       .leftJoinAndSelect('article.relatedDevelopers', 'developer')
       .leftJoinAndSelect('article.relatedGames', 'game')
       .leftJoinAndSelect('article.template', 'template')
+      .leftJoinAndSelect('article.images', 'images')
       .leftJoinAndMapOne(
         'article.coverImage',
         ArticleImage,
@@ -511,10 +521,17 @@ export class ArticlesService {
       .take(limit)
       .getManyAndCount();
 
-    // Transformar los resultados para tener la estructura deseada
+    // Transformar los resultados manteniendo la misma estructura
     const transformedArticles = articles.map((article) => {
       const { coverImageId, ...rest } = article as any;
       const coverImage = article['coverImage'];
+      const contentImages =
+        article['images']
+          ?.filter((img) => img.id !== coverImageId)
+          ?.map((img) => ({
+            id: img.id,
+            path: img.path,
+          })) || [];
 
       return {
         ...rest,
@@ -524,6 +541,7 @@ export class ArticlesService {
               path: coverImage.path,
             }
           : null,
+        contentImages,
       };
     });
 
@@ -561,22 +579,29 @@ export class ArticlesService {
       );
     }
 
-    // Primero, desvinculamos todas las imágenes actuales del artículo
-    await this.articleImageRepository.update(
-      { articleId },
-      { articleId: null },
-    );
+    // Primero, eliminamos todas las relaciones existentes
+    await this.articleImageRepository
+      .createQueryBuilder()
+      .relation(ArticleImage, 'articles')
+      .of(images)
+      .remove(articleId);
 
-    // Luego, actualizamos las nuevas imágenes para que pertenezcan a este artículo
+    // Luego, creamos las nuevas relaciones con el orden correcto
     await Promise.all(
       imageIds.map((imageId, index) =>
-        this.articleImageRepository.update(
-          { id: imageId },
-          {
-            articleId: articleId,
-            order: index + 1,
-          },
-        ),
+        Promise.all([
+          // Crear la relación ManyToMany
+          this.articleImageRepository
+            .createQueryBuilder()
+            .relation(ArticleImage, 'articles')
+            .of(imageId)
+            .add(articleId),
+          // Actualizar el orden
+          this.articleImageRepository.update(
+            { id: imageId },
+            { order: index + 1 },
+          ),
+        ]),
       ),
     );
 

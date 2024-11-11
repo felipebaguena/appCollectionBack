@@ -18,6 +18,7 @@ import { AuthGuard } from '@nestjs/passport';
 import { ArticleImagesService } from './article-images.service';
 import { RolesGuard } from 'src/guards/roles.guard';
 import { Roles } from 'src/guards/roles.decorator';
+import { ArticleImageWithLegacyFields } from './interfaces/article-image.interface';
 
 @Controller('article-images')
 export class ArticleImagesController {
@@ -42,7 +43,7 @@ export class ArticleImagesController {
   async uploadImage(
     @UploadedFile() file: Express.Multer.File,
     @Body() body: { articleId: number; gameId: number },
-  ) {
+  ): Promise<ArticleImageWithLegacyFields> {
     return this.articleImagesService.create({
       filename: file.filename,
       path: file.path,
@@ -52,7 +53,9 @@ export class ArticleImagesController {
   }
 
   @Get('article/:articleId')
-  async getArticleImages(@Param('articleId') articleId: string) {
+  async getArticleImages(
+    @Param('articleId') articleId: string,
+  ): Promise<ArticleImageWithLegacyFields[]> {
     return this.articleImagesService.findByArticle(+articleId);
   }
 

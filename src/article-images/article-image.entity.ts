@@ -4,6 +4,8 @@ import {
   Column,
   ManyToOne,
   JoinColumn,
+  ManyToMany,
+  JoinTable,
 } from 'typeorm';
 import { Article } from '../articles/article.entity';
 import { Game } from '../games/game.entity';
@@ -22,17 +24,8 @@ export class ArticleImage {
   @Column({ name: 'is_cover', default: false })
   isCover: boolean;
 
-  @Column({ name: 'article_id', nullable: true })
-  articleId: number;
-
   @Column({ name: 'game_id', nullable: true })
   gameId: number;
-
-  @ManyToOne(() => Article, (article) => article.images, {
-    onDelete: 'SET NULL',
-  })
-  @JoinColumn({ name: 'article_id' })
-  article: Article;
 
   @ManyToOne(() => Game, (game) => game.articleImages, { onDelete: 'SET NULL' })
   @JoinColumn({ name: 'game_id' })
@@ -43,4 +36,7 @@ export class ArticleImage {
 
   @Column({ default: 0 })
   order: number;
+
+  @ManyToMany(() => Article, (article) => article.images)
+  articles: Article[];
 }

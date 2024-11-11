@@ -54,8 +54,17 @@ export class Article {
   @JoinTable()
   relatedGenres: Genre[];
 
-  @OneToMany(() => ArticleImage, (image) => image.article, {
-    onDelete: 'SET NULL',
+  @ManyToMany(() => ArticleImage, (image) => image.articles)
+  @JoinTable({
+    name: 'article_images_articles',
+    joinColumn: {
+      name: 'article_id',
+      referencedColumnName: 'id',
+    },
+    inverseJoinColumn: {
+      name: 'image_id',
+      referencedColumnName: 'id',
+    },
   })
   images: ArticleImage[];
 
