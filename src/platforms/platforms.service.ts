@@ -18,7 +18,10 @@ export class PlatformsService {
   }
 
   findAll(): Promise<Platform[]> {
-    return this.platformsRepository.find();
+    return this.platformsRepository
+      .createQueryBuilder('platform')
+      .orderBy('platform.name', 'ASC')
+      .getMany();
   }
 
   async findOne(id: number): Promise<Platform> {

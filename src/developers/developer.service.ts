@@ -33,7 +33,10 @@ export class DevelopersService {
   }
 
   findAll(): Promise<Developer[]> {
-    return this.developersRepository.find();
+    return this.developersRepository
+      .createQueryBuilder('developer')
+      .orderBy('developer.name', 'ASC')
+      .getMany();
   }
 
   async findOne(id: number): Promise<Developer> {

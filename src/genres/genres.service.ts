@@ -33,7 +33,10 @@ export class GenresService {
   }
 
   findAll(): Promise<Genre[]> {
-    return this.genresRepository.find();
+    return this.genresRepository
+      .createQueryBuilder('genre')
+      .orderBy('genre.name', 'ASC')
+      .getMany();
   }
 
   async findOne(id: number): Promise<Genre> {
