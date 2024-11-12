@@ -3,9 +3,10 @@ import {
   Logger,
   NotFoundException,
   BadRequestException,
+  OnApplicationBootstrap,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, In } from 'typeorm';
+import { Repository, In, Raw } from 'typeorm';
 import { Article } from './article.entity';
 import { Game } from '../games/game.entity';
 import { Platform } from '../platforms/platform.entity';
@@ -16,7 +17,7 @@ import { PublishedStatus } from './articles.enum';
 import { ArticleImage } from '../article-images/article-image.entity';
 
 @Injectable()
-export class ArticlesService {
+export class ArticlesService implements OnApplicationBootstrap {
   private readonly logger = new Logger(ArticlesService.name);
 
   constructor(
@@ -35,6 +36,53 @@ export class ArticlesService {
     @InjectRepository(ArticleImage)
     private articleImageRepository: Repository<ArticleImage>,
   ) {}
+
+  onApplicationBootstrap() {
+    setInterval(() => {
+      this.checkScheduledPublications();
+    }, 60000);
+  }
+
+  private async checkScheduledPublications() {
+    const now = new Date();
+
+    const scheduledArticles = await this.articleRepository.find({
+      where: {
+        published: false,
+        scheduledPublishAt: Raw((alias) => `${alias} <= :now`, { now }),
+      },
+    });
+
+    for (const article of scheduledArticles) {
+      try {
+        article.published = true;
+        article.publishedAt = now;
+        article.scheduledPublishAt = null;
+        await this.articleRepository.save(article);
+
+        this.logger.log(`Artículo ${article.id} publicado automáticamente`);
+      } catch (error) {
+        this.logger.error(
+          `Error al publicar el artículo ${article.id}:`,
+          error,
+        );
+      }
+    }
+  }
+
+  async schedulePublication(id: number, publishAt: Date): Promise<Article> {
+    const article = await this.findOne(id);
+
+    if (publishAt <= new Date()) {
+      throw new BadRequestException('La fecha de publicación debe ser futura');
+    }
+
+    article.scheduledPublishAt = publishAt;
+    article.published = false;
+    article.publishedAt = null;
+
+    return this.articleRepository.save(article);
+  }
 
   async create(
     article: Partial<Article> & {

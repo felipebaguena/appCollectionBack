@@ -77,4 +77,7 @@ export class Article {
 
   @Column({ name: 'template_id', nullable: true })
   templateId: number;
+
+  @Column({ type: 'timestamp', nullable: true })
+  scheduledPublishAt: Date;
 }

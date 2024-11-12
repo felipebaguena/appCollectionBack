@@ -73,6 +73,18 @@ export class ArticlesController {
     return this.articlesService.findAll();
   }
 
+  @Get('server-time')
+  getServerTime() {
+    const now = new Date();
+    return {
+      iso: now.toISOString(),
+      local: now.toString(),
+      timestamp: now.getTime(),
+      timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+      offset: -now.getTimezoneOffset() / 60,
+    };
+  }
+
   @Get(':id')
   findOne(@Param('id') id: string) {
     return this.articlesService.findOne(+id);
@@ -117,6 +129,17 @@ export class ArticlesController {
   @Roles('SUPERUSER')
   unpublish(@Param('id') id: string) {
     return this.articlesService.unpublish(+id);
+  }
+
+  @Put(':id/schedule')
+  @UseGuards(AuthGuard('jwt'), RolesGuard)
+  @Roles('SUPERUSER')
+  async schedulePublication(
+    @Param('id') id: string,
+    @Body() body: { publishAt: string },
+  ) {
+    const publishAt = new Date(body.publishAt);
+    return this.articlesService.schedulePublication(+id, publishAt);
   }
 
   @Delete(':id')
