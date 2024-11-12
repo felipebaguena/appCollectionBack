@@ -85,6 +85,11 @@ export class ArticlesController {
     };
   }
 
+  @Get('home')
+  async getHomeArticles() {
+    return this.articlesService.getHomeArticles();
+  }
+
   @Get(':id')
   findOne(@Param('id') id: string) {
     return this.articlesService.findOne(+id);

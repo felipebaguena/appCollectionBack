@@ -15,6 +15,7 @@ import { Genre } from '../genres/genre.entity';
 import { ArticleTemplate } from '../article-templates/article-template.entity';
 import { PublishedStatus } from './articles.enum';
 import { ArticleImage } from '../article-images/article-image.entity';
+import { HomeArticlesResponse } from './articles.interface';
 
 @Injectable()
 export class ArticlesService implements OnApplicationBootstrap {
@@ -674,5 +675,53 @@ export class ArticlesService implements OnApplicationBootstrap {
     );
 
     return this.findOne(articleId);
+  }
+
+  async getHomeArticles(): Promise<HomeArticlesResponse> {
+    const queryBuilder = this.articleRepository
+      .createQueryBuilder('article')
+      .leftJoinAndSelect('article.relatedGames', 'relatedGames')
+      .leftJoinAndSelect('article.relatedPlatforms', 'relatedPlatforms')
+      .leftJoinAndSelect('article.relatedDevelopers', 'relatedDevelopers')
+      .leftJoinAndSelect('article.relatedGenres', 'relatedGenres')
+      .leftJoinAndSelect('article.template', 'template')
+      .leftJoinAndMapOne(
+        'article.coverImage',
+        ArticleImage,
+        'coverImage',
+        'coverImage.id = article.coverImageId',
+      )
+      .leftJoinAndSelect('article.images', 'images')
+      .where('article.published = :published', { published: true })
+      .orderBy('article.publishedAt', 'DESC');
+
+    const articles = await queryBuilder.take(10).getMany();
+
+    // Transformar los artículos
+    const transformedArticles = articles.map((article) => ({
+      ...article,
+      coverImage: article['coverImage']
+        ? {
+            id: article['coverImage'].id,
+            path: article['coverImage'].path,
+          }
+        : null,
+      contentImages: (article['images'] || [])
+        .filter((img) => img.id !== article.coverImageId)
+        .sort((a, b) => a.order - b.order)
+        .map((img) => ({
+          id: img.id,
+          path: img.path,
+        })),
+    }));
+
+    // Eliminar la propiedad 'images' ya que no la necesitamos
+    transformedArticles.forEach((article) => delete (article as any).images);
+
+    return {
+      coverArticle: transformedArticles[0] || null,
+      topArticles: transformedArticles.slice(1, 4),
+      homeArticles: transformedArticles.slice(4, 10),
+    };
   }
 }
