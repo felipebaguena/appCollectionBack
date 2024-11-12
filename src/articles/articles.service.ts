@@ -125,7 +125,27 @@ export class ArticlesService {
       newArticle.relatedPlatforms = platforms;
     }
 
-    // ... (resto del código para developers y genres)
+    // Verificar y asignar desarrolladores relacionados
+    if (relatedDevelopers.length) {
+      const developers = await this.developerRepository.findBy({
+        id: In(relatedDevelopers),
+      });
+      if (developers.length !== relatedDevelopers.length) {
+        throw new NotFoundException('Uno o más desarrolladores no encontrados');
+      }
+      newArticle.relatedDevelopers = developers;
+    }
+
+    // Verificar y asignar géneros relacionados
+    if (relatedGenres.length) {
+      const genres = await this.genreRepository.findBy({
+        id: In(relatedGenres),
+      });
+      if (genres.length !== relatedGenres.length) {
+        throw new NotFoundException('Uno o más géneros no encontrados');
+      }
+      newArticle.relatedGenres = genres;
+    }
 
     // Guardar el artículo
     newArticle = await this.articleRepository.save(newArticle);
