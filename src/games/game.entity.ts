@@ -12,6 +12,7 @@ import { Genre } from '../genres/genre.entity';
 import { Developer } from '../developers/developer.entity';
 import { Article } from '../articles/article.entity';
 import { ArticleImage } from '../article-images/article-image.entity';
+import { UserGame } from '../user-games/user-game.entity';
 
 @Entity()
 export class Game {
@@ -53,4 +54,10 @@ export class Game {
 
   @OneToMany(() => ArticleImage, (image) => image.game)
   articleImages: ArticleImage[];
+
+  @OneToMany(() => UserGame, (userGame) => userGame.game, {
+    cascade: true,
+    onDelete: 'CASCADE',
+  })
+  userGames: UserGame[];
 }

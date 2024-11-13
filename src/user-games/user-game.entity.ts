@@ -18,7 +18,9 @@ export class UserGame {
   @ManyToOne(() => User, (user) => user.userGames)
   user: User;
 
-  @ManyToOne(() => Game)
+  @ManyToOne(() => Game, (game) => game.userGames, {
+    onDelete: 'CASCADE',
+  })
   game: Game;
 
   @ManyToMany(() => Platform)
