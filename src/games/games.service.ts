@@ -528,4 +528,50 @@ export class GamesService {
 
     return queryBuilder.getMany();
   }
+
+  async getTopRatedGames(): Promise<
+    {
+      id: number;
+      title: string;
+      averageRating: number;
+      totalRatings: number;
+      coverImage: {
+        id: number;
+        path: string;
+      };
+    }[]
+  > {
+    const results = await this.userGamesRepository
+      .createQueryBuilder('userGame')
+      .leftJoin('userGame.game', 'game')
+      .leftJoin('game.images', 'image', 'image.id = game.coverId')
+      .select([
+        'game.id as id',
+        'game.title as title',
+        'AVG(userGame.rating) as averageRating',
+        'COUNT(userGame.rating) as totalRatings',
+        'image.id as imageId',
+        'image.path as imagePath',
+      ])
+      .where('userGame.rating IS NOT NULL')
+      .andWhere('game.coverId IS NOT NULL')
+      .groupBy('game.id')
+      .having('COUNT(userGame.rating) >= :minRatings', { minRatings: 1 })
+      .orderBy('averageRating', 'DESC')
+      .addOrderBy('totalRatings', 'DESC')
+      .addOrderBy('game.title', 'ASC')
+      .limit(5)
+      .getRawMany();
+
+    return results.map((game) => ({
+      id: game.id,
+      title: game.title,
+      averageRating: Number(game.averageRating),
+      totalRatings: Number(game.totalRatings),
+      coverImage: {
+        id: game.imageId,
+        path: game.imagePath,
+      },
+    }));
+  }
 }

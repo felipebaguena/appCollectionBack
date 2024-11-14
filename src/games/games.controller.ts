@@ -52,6 +52,11 @@ export class GamesController {
     return this.gamesService.getHomeGames(limit);
   }
 
+  @Get('top-rated')
+  async getTopRatedGames() {
+    return this.gamesService.getTopRatedGames();
+  }
+
   @Get('search')
   async searchGames(@Query('title') title: string) {
     if (!title) {
