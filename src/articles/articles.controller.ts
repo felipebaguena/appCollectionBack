@@ -17,6 +17,7 @@ import { Article } from './article.entity';
 import { RolesGuard } from '../guards/roles.guard';
 import { Roles } from '../guards/roles.decorator';
 import { PublishedStatus } from './articles.enum';
+import { ArticlesPageResponse } from './articles.interface';
 
 @Controller('articles')
 export class ArticlesController {
@@ -88,6 +89,17 @@ export class ArticlesController {
   @Get('home')
   async getHomeArticles() {
     return this.articlesService.getHomeArticles();
+  }
+
+  @Get('all-articles')
+  async getArticlesForArticlesPage(
+    @Query('page') page: number = 1,
+    @Query('limit') limit: number = 12,
+  ): Promise<ArticlesPageResponse> {
+    return this.articlesService.getArticlesForArticlesPage({
+      page,
+      limit,
+    });
   }
 
   @Get(':id')

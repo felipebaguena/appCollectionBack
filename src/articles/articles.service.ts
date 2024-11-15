@@ -15,7 +15,11 @@ import { Genre } from '../genres/genre.entity';
 import { ArticleTemplate } from '../article-templates/article-template.entity';
 import { PublishedStatus } from './articles.enum';
 import { ArticleImage } from '../article-images/article-image.entity';
-import { HomeArticlesResponse } from './articles.interface';
+import {
+  HomeArticlesResponse,
+  ArticleCardResponse,
+  ArticlesPageResponse,
+} from './articles.interface';
 
 @Injectable()
 export class ArticlesService implements OnApplicationBootstrap {
@@ -722,6 +726,91 @@ export class ArticlesService implements OnApplicationBootstrap {
       coverArticle: transformedArticles[0] || null,
       topArticles: transformedArticles.slice(1, 4),
       homeArticles: transformedArticles.slice(4, 10),
+    };
+  }
+
+  async getArticlesForArticlesPage(options: {
+    page: number;
+    limit: number;
+  }): Promise<ArticlesPageResponse> {
+    const { page, limit } = options;
+    const skip = (page - 1) * limit;
+
+    // Primero obtenemos los 3 artículos más recientes
+    const topArticlesQuery = this.articleRepository
+      .createQueryBuilder('article')
+      .leftJoinAndMapOne(
+        'article.coverImage',
+        ArticleImage,
+        'coverImage',
+        'coverImage.id = article.coverImageId',
+      )
+      .select([
+        'article.id',
+        'article.title',
+        'article.subtitle',
+        'article.updatedAt',
+        'article.publishedAt',
+        'coverImage.id',
+        'coverImage.path',
+      ])
+      .where('article.published = :published', { published: true })
+      .orderBy('article.publishedAt', 'DESC')
+      .take(3);
+
+    const topArticles = await topArticlesQuery.getMany();
+
+    // Luego obtenemos los artículos archivados, excluyendo los top 3
+    const archivedArticlesQuery = this.articleRepository
+      .createQueryBuilder('article')
+      .leftJoinAndMapOne(
+        'article.coverImage',
+        ArticleImage,
+        'coverImage',
+        'coverImage.id = article.coverImageId',
+      )
+      .select([
+        'article.id',
+        'article.title',
+        'article.subtitle',
+        'article.updatedAt',
+        'article.publishedAt',
+        'coverImage.id',
+        'coverImage.path',
+      ])
+      .where('article.published = :published', { published: true })
+      .andWhere('article.id NOT IN (:...topIds)', {
+        topIds: topArticles.map((a) => a.id),
+      })
+      .orderBy('article.publishedAt', 'DESC')
+      .skip(skip)
+      .take(limit);
+
+    const [archivedArticles, totalItems] =
+      await archivedArticlesQuery.getManyAndCount();
+
+    // Transformar los resultados
+    const transformArticle = (article: any): ArticleCardResponse => ({
+      id: article.id,
+      title: article.title,
+      subtitle: article.subtitle,
+      updatedAt: article.updatedAt,
+      publishedAt: article.publishedAt,
+      coverImage: article['coverImage']
+        ? {
+            id: article['coverImage'].id,
+            path: article['coverImage'].path,
+          }
+        : null,
+    });
+
+    return {
+      topArticles: topArticles.map(transformArticle),
+      archivedArticles: {
+        data: archivedArticles.map(transformArticle),
+        totalItems,
+        totalPages: Math.ceil(totalItems / limit),
+      },
     };
   }
 }
