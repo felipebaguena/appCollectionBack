@@ -12,6 +12,7 @@ export interface ArticleCardResponse {
   subtitle: string | null;
   updatedAt: Date;
   publishedAt: Date;
+  metadata: string;
   coverImage: {
     id: number;
     path: string;

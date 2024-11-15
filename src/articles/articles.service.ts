@@ -745,6 +745,10 @@ export class ArticlesService implements OnApplicationBootstrap {
         'coverImage',
         'coverImage.id = article.coverImageId',
       )
+      .leftJoinAndSelect('article.relatedGames', 'relatedGames')
+      .leftJoinAndSelect('article.relatedPlatforms', 'relatedPlatforms')
+      .leftJoinAndSelect('article.relatedDevelopers', 'relatedDevelopers')
+      .leftJoinAndSelect('article.relatedGenres', 'relatedGenres')
       .select([
         'article.id',
         'article.title',
@@ -753,6 +757,10 @@ export class ArticlesService implements OnApplicationBootstrap {
         'article.publishedAt',
         'coverImage.id',
         'coverImage.path',
+        'relatedGames.title',
+        'relatedPlatforms.name',
+        'relatedDevelopers.name',
+        'relatedGenres.name',
       ])
       .where('article.published = :published', { published: true })
       .orderBy('article.publishedAt', 'DESC')
@@ -769,6 +777,10 @@ export class ArticlesService implements OnApplicationBootstrap {
         'coverImage',
         'coverImage.id = article.coverImageId',
       )
+      .leftJoinAndSelect('article.relatedGames', 'relatedGames')
+      .leftJoinAndSelect('article.relatedPlatforms', 'relatedPlatforms')
+      .leftJoinAndSelect('article.relatedDevelopers', 'relatedDevelopers')
+      .leftJoinAndSelect('article.relatedGenres', 'relatedGenres')
       .select([
         'article.id',
         'article.title',
@@ -777,6 +789,10 @@ export class ArticlesService implements OnApplicationBootstrap {
         'article.publishedAt',
         'coverImage.id',
         'coverImage.path',
+        'relatedGames.title',
+        'relatedPlatforms.name',
+        'relatedDevelopers.name',
+        'relatedGenres.name',
       ])
       .where('article.published = :published', { published: true })
       .andWhere('article.id NOT IN (:...topIds)', {
@@ -789,6 +805,20 @@ export class ArticlesService implements OnApplicationBootstrap {
     const [archivedArticles, totalItems] =
       await archivedArticlesQuery.getManyAndCount();
 
+    // Función helper para generar el metadata
+    const generateMetadata = (article: any): string => {
+      const parts = [
+        article.relatedGames?.map((g) => g.title),
+        article.relatedDevelopers?.map((d) => d.name),
+        article.relatedPlatforms?.map((p) => p.name),
+        article.relatedGenres?.map((g) => g.name),
+      ]
+        .filter((arr) => arr && arr.length > 0)
+        .map((arr) => arr.join(', '));
+
+      return parts.join(' - ');
+    };
+
     // Transformar los resultados
     const transformArticle = (article: any): ArticleCardResponse => ({
       id: article.id,
@@ -796,6 +826,7 @@ export class ArticlesService implements OnApplicationBootstrap {
       subtitle: article.subtitle,
       updatedAt: article.updatedAt,
       publishedAt: article.publishedAt,
+      metadata: generateMetadata(article),
       coverImage: article['coverImage']
         ? {
             id: article['coverImage'].id,
