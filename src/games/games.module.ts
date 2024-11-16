@@ -11,6 +11,8 @@ import { UserGame } from '../user-games/user-game.entity';
 import { JwtModule } from '@nestjs/jwt';
 import { RolesGuard } from '../guards/roles.guard';
 import { ConfigModule, ConfigService } from '@nestjs/config';
+import { ArticleImage } from '../article-images/article-image.entity';
+import { Article } from '../articles/article.entity';
 
 @Module({
   imports: [
@@ -21,6 +23,8 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
       Genre,
       Developer,
       UserGame,
+      ArticleImage,
+      Article,
     ]),
     JwtModule.registerAsync({
       imports: [ConfigModule],

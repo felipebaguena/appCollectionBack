@@ -9,6 +9,9 @@ import { Developer } from '../developers/developer.entity';
 import { CollectionSortType } from './games.enum';
 import { UserGame } from 'src/user-games/user-game.entity';
 import { CollectionFilterType } from './games.enum';
+import { ArticleImage } from 'src/article-images/article-image.entity';
+import { Article } from '../articles/article.entity';
+import { FormattedArticle } from './interfaces/formatted-article.interface';
 
 @Injectable()
 export class GamesService {
@@ -27,6 +30,10 @@ export class GamesService {
     private developerRepository: Repository<Developer>,
     @InjectRepository(UserGame)
     private userGamesRepository: Repository<UserGame>,
+    @InjectRepository(ArticleImage)
+    private articleImagesRepository: Repository<ArticleImage>,
+    @InjectRepository(Article)
+    private articlesRepository: Repository<Article>,
   ) {}
 
   async create(
@@ -184,7 +191,7 @@ export class GamesService {
   async findOneWithImages(
     id: number,
     userId?: number,
-  ): Promise<Game & { inCollection?: boolean }> {
+  ): Promise<Game & { inCollection?: boolean; articles?: FormattedArticle[] }> {
     const queryBuilder = this.gamesRepository
       .createQueryBuilder('game')
       .leftJoinAndSelect('game.images', 'image')
@@ -214,6 +221,40 @@ export class GamesService {
       throw new NotFoundException('Juego no encontrado');
     }
 
+    // Obtener los artículos relacionados
+    const articles = await this.articlesRepository
+      .createQueryBuilder('article')
+      .select([
+        'article.id',
+        'article.title',
+        'article.subtitle',
+        'article.publishedAt',
+      ])
+      .leftJoinAndMapOne(
+        'article.coverImage',
+        ArticleImage,
+        'coverImage',
+        'coverImage.id = article.coverImageId',
+      )
+      .leftJoin('article.relatedGames', 'relatedGame')
+      .where('relatedGame.id = :gameId', { gameId: id })
+      .andWhere('article.published = :published', { published: true })
+      .orderBy('article.publishedAt', 'DESC')
+      .getMany();
+
+    const formattedArticles: FormattedArticle[] = articles.map((article) => ({
+      id: article.id,
+      title: article.title,
+      subtitle: article.subtitle,
+      publishedAt: article.publishedAt,
+      coverImage: (article as any).coverImage
+        ? {
+            id: (article as any).coverImage.id,
+            path: (article as any).coverImage.path,
+          }
+        : undefined,
+    }));
+
     // Si hay userId, añadimos la propiedad inCollection
     if (userId) {
       const userGame = await this.userGamesRepository
@@ -224,11 +265,15 @@ export class GamesService {
 
       return {
         ...game,
+        articles: formattedArticles,
         inCollection: Boolean(userGame),
-      };
+      } as Game & { inCollection: boolean; articles: FormattedArticle[] };
     }
 
-    return game;
+    return {
+      ...game,
+      articles: formattedArticles,
+    } as Game & { articles: FormattedArticle[] };
   }
 
   async setCover(gameId: number, imageId: number): Promise<Game> {

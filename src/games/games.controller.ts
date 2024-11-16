@@ -19,6 +19,7 @@ import { RolesGuard } from '../guards/roles.guard';
 import { Roles } from '../guards/roles.decorator';
 import { CollectionSortType } from './games.enum';
 import { OptionalJwtGuard } from '../auth/optional-jwt.guard';
+import { FormattedArticle } from './interfaces/formatted-article.interface';
 
 @Controller('games')
 export class GamesController {
@@ -67,7 +68,10 @@ export class GamesController {
 
   @Get(':id')
   @UseGuards(OptionalJwtGuard)
-  async findOne(@Param('id') id: string, @Request() req) {
+  async findOne(
+    @Param('id') id: string,
+    @Request() req,
+  ): Promise<Game & { inCollection?: boolean; articles?: FormattedArticle[] }> {
     const userId = req.user?.userId || null;
     return this.gamesService.findOneWithImages(+id, userId);
   }
