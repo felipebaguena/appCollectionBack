@@ -732,8 +732,9 @@ export class ArticlesService implements OnApplicationBootstrap {
   async getArticlesForArticlesPage(options: {
     page: number;
     limit: number;
+    gameId?: number;
   }): Promise<ArticlesPageResponse> {
-    const { page, limit } = options;
+    const { page, limit, gameId } = options;
     const skip = (page - 1) * limit;
 
     // Primero obtenemos los 3 artículos más recientes
@@ -797,7 +798,14 @@ export class ArticlesService implements OnApplicationBootstrap {
       .where('article.published = :published', { published: true })
       .andWhere('article.id NOT IN (:...topIds)', {
         topIds: topArticles.map((a) => a.id),
-      })
+      });
+
+    // Añadimos el filtro por juego si se proporciona gameId
+    if (gameId) {
+      archivedArticlesQuery.andWhere('relatedGames.id = :gameId', { gameId });
+    }
+
+    archivedArticlesQuery
       .orderBy('article.publishedAt', 'DESC')
       .skip(skip)
       .take(limit);

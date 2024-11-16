@@ -95,10 +95,12 @@ export class ArticlesController {
   async getArticlesForArticlesPage(
     @Query('page') page: number = 1,
     @Query('limit') limit: number = 12,
+    @Query('gameId') gameId?: number,
   ): Promise<ArticlesPageResponse> {
     return this.articlesService.getArticlesForArticlesPage({
       page,
       limit,
+      gameId,
     });
   }
 
