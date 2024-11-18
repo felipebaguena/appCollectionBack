@@ -16,3 +16,9 @@ export enum CompleteFilterType {
   INCOMPLETE = 'INCOMPLETE',
   ALL = 'ALL',
 }
+
+export enum CollectionStatusType {
+  ALL = 'ALL',
+  OWNED = 'OWNED',
+  WISHED = 'WISHED',
+}

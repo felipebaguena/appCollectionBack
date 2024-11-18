@@ -10,7 +10,11 @@ import { User } from '../users/user.entity';
 import { Game } from '../games/game.entity';
 import { Platform } from '../platforms/platform.entity';
 import { In } from 'typeorm';
-import { MyCollectionSortType, CompleteFilterType } from './user-games.enum';
+import {
+  MyCollectionSortType,
+  CompleteFilterType,
+  CollectionStatusType,
+} from './user-games.enum';
 
 @Injectable()
 export class UserGamesService {
@@ -226,6 +230,7 @@ export class UserGamesService {
           start: string; // ISO date string
           end: string; // ISO date string
         };
+        collectionStatus?: CollectionStatusType;
       };
     },
   ): Promise<{
@@ -353,6 +358,19 @@ export class UserGamesService {
           addedEnd: new Date(filter.addedAtRange.end),
         },
       );
+    }
+
+    // Filtro para collectionStatus
+    if (filter?.collectionStatus) {
+      switch (filter.collectionStatus) {
+        case CollectionStatusType.OWNED:
+          queryBuilder.andWhere('userGame.owned = :owned', { owned: true });
+          break;
+        case CollectionStatusType.WISHED:
+          queryBuilder.andWhere('userGame.wished = :wished', { wished: true });
+          break;
+        // Para ALL no necesitamos añadir ningún filtro
+      }
     }
 
     // Ordenación
