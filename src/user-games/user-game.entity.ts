@@ -45,4 +45,10 @@ export class UserGame {
 
   @Column({ type: 'timestamp', default: () => 'CURRENT_TIMESTAMP' })
   addedAt: Date;
+
+  @Column({ default: false })
+  owned: boolean;
+
+  @Column({ default: false })
+  wished: boolean;
 }

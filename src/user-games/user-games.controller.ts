@@ -55,6 +55,8 @@ export class UserGamesController {
       complete?: boolean;
       notes?: string;
       platformIds?: number[];
+      owned?: boolean;
+      wished?: boolean;
     },
   ) {
     const { gameId, ...data } = body;
@@ -84,6 +86,8 @@ export class UserGamesController {
       complete?: boolean;
       notes?: string;
       platformIds?: number[];
+      owned?: boolean;
+      wished?: boolean;
     },
   ) {
     return this.userGamesService.updateGameDetails(

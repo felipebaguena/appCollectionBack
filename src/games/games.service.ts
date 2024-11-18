@@ -191,7 +191,14 @@ export class GamesService {
   async findOneWithImages(
     id: number,
     userId?: number,
-  ): Promise<Game & { inCollection?: boolean; articles?: FormattedArticle[] }> {
+  ): Promise<
+    Game & {
+      inCollection?: boolean;
+      owned?: boolean;
+      wished?: boolean;
+      articles?: FormattedArticle[];
+    }
+  > {
     const queryBuilder = this.gamesRepository
       .createQueryBuilder('game')
       .leftJoinAndSelect('game.images', 'image')
@@ -210,7 +217,9 @@ export class GamesService {
         .addSelect(
           'CASE WHEN userGame.id IS NOT NULL THEN true ELSE false END',
           'inCollection',
-        );
+        )
+        .addSelect('userGame.owned', 'owned')
+        .addSelect('userGame.wished', 'wished');
     }
 
     queryBuilder.where('game.id = :id', { id });
@@ -264,14 +273,21 @@ export class GamesService {
         .getOne();
 
       return {
-        ...game,
+        ...(game as Game),
         articles: formattedArticles,
         inCollection: Boolean(userGame),
-      } as Game & { inCollection: boolean; articles: FormattedArticle[] };
+        owned: userGame?.owned || false,
+        wished: userGame?.wished || false,
+      } as Game & {
+        inCollection: boolean;
+        owned: boolean;
+        wished: boolean;
+        articles: FormattedArticle[];
+      };
     }
 
     return {
-      ...game,
+      ...(game as Game),
       articles: formattedArticles,
     } as Game & { articles: FormattedArticle[] };
   }
@@ -424,6 +440,8 @@ export class GamesService {
         name: string;
       }[];
       inCollection: boolean;
+      owned: boolean; // Añadir
+      wished: boolean; // Añadir
     }[];
     totalItems: number;
     totalPages: number;
@@ -449,6 +467,8 @@ export class GamesService {
         'image.id as image_id',
         'image.path as image_path',
         'MAX(userGame.id) as userGame_id',
+        'MAX(userGame.owned) as game_owned', // Añadir
+        'MAX(userGame.wished) as game_wished', // Añadir
         'GROUP_CONCAT(DISTINCT platform.id) as platform_ids',
         'GROUP_CONCAT(DISTINCT platform.name) as platform_names',
       ])
@@ -553,6 +573,8 @@ export class GamesService {
             }))
           : [],
         inCollection: Boolean(game.userGame_id),
+        owned: Boolean(game.game_owned), // Añadir
+        wished: Boolean(game.game_wished), // Añadir
       })),
       totalItems,
       totalPages: Math.ceil(totalItems / limit),

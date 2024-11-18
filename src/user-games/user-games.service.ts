@@ -32,6 +32,8 @@ export class UserGamesService {
       complete?: boolean;
       notes?: string;
       platformIds?: number[];
+      owned?: boolean;
+      wished?: boolean;
     },
   ): Promise<UserGame> {
     const existingEntry = await this.userGamesRepository.findOne({
@@ -40,6 +42,16 @@ export class UserGamesService {
         game: { id: gameId },
       },
     });
+
+    if (existingEntry && existingEntry.wished && data.owned) {
+      Object.assign(existingEntry, {
+        ...data,
+        wished: false,
+        owned: true,
+      });
+
+      return this.userGamesRepository.save(existingEntry);
+    }
 
     if (existingEntry) {
       throw new BadRequestException('Este juego ya está en tu colección');
@@ -56,6 +68,12 @@ export class UserGamesService {
 
     if (data.status && (data.status < 0 || data.status > 10)) {
       throw new BadRequestException('El status debe estar entre 0 y 10');
+    }
+
+    if (data.owned && data.wished) {
+      throw new BadRequestException(
+        'Un juego no puede estar en ambos estados: owned y wished',
+      );
     }
 
     let platforms = [];
@@ -87,6 +105,8 @@ export class UserGamesService {
       complete?: boolean;
       notes?: string;
       platformIds?: number[];
+      owned?: boolean;
+      wished?: boolean;
     },
   ): Promise<UserGame> {
     const userGame = await this.userGamesRepository.findOne({
@@ -112,6 +132,12 @@ export class UserGamesService {
 
     if (data.status && (data.status < 0 || data.status > 10)) {
       throw new BadRequestException('El status debe estar entre 0 y 10');
+    }
+
+    if (data.owned && data.wished) {
+      throw new BadRequestException(
+        'Un juego no puede estar en ambos estados: owned y wished',
+      );
     }
 
     if (data.platformIds) {
@@ -222,6 +248,8 @@ export class UserGamesService {
       complete: boolean;
       notes: string;
       addedAt: Date;
+      owned: boolean;
+      wished: boolean;
     }[];
     totalItems: number;
     totalPages: number;
@@ -394,6 +422,8 @@ export class UserGamesService {
         complete: ug.complete,
         notes: ug.notes,
         addedAt: ug.addedAt,
+        owned: ug.owned,
+        wished: ug.wished,
       })),
       totalItems,
       totalPages: Math.ceil(totalItems / limit),
@@ -420,6 +450,8 @@ export class UserGamesService {
       complete: boolean;
       notes: string;
       addedAt: Date;
+      owned: boolean;
+      wished: boolean;
     }[]
   > {
     const userGames = await this.userGamesRepository
@@ -452,6 +484,8 @@ export class UserGamesService {
       complete: ug.complete,
       notes: ug.notes,
       addedAt: ug.addedAt,
+      owned: ug.owned,
+      wished: ug.wished,
     }));
   }
 
@@ -482,6 +516,8 @@ export class UserGamesService {
     complete: boolean;
     notes: string;
     addedAt: Date;
+    owned: boolean;
+    wished: boolean;
   }> {
     const userGame = await this.userGamesRepository
       .createQueryBuilder('userGame')
@@ -523,6 +559,8 @@ export class UserGamesService {
       complete: userGame.complete,
       notes: userGame.notes,
       addedAt: userGame.addedAt,
+      owned: userGame.owned,
+      wished: userGame.wished,
     };
   }
 }
