@@ -516,8 +516,18 @@ export class GamesService {
     // Aplicamos el filtro usando el enum
     if (filter?.collectionStatus) {
       switch (filter.collectionStatus) {
-        case CollectionFilterType.IN_COLLECTION:
+        case CollectionFilterType.IN_COLLECTION_ALL:
           queryBuilder.andWhere('userGame.id IS NOT NULL');
+          break;
+        case CollectionFilterType.IN_COLLECTION_OWNED:
+          queryBuilder
+            .andWhere('userGame.id IS NOT NULL')
+            .andWhere('userGame.owned = :owned', { owned: true });
+          break;
+        case CollectionFilterType.IN_COLLECTION_WISHED:
+          queryBuilder
+            .andWhere('userGame.id IS NOT NULL')
+            .andWhere('userGame.wished = :wished', { wished: true });
           break;
         case CollectionFilterType.NOT_IN_COLLECTION:
           queryBuilder.andWhere('userGame.id IS NULL');
