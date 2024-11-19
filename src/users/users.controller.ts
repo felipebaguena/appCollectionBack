@@ -1,7 +1,16 @@
-import { Controller, Get, Post, Body, UseGuards, Request, Put } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Body,
+  UseGuards,
+  Request,
+  Put,
+} from '@nestjs/common';
 import { UsersService } from './users.service';
 import { User } from './user.entity';
 import { AuthGuard } from '@nestjs/passport';
+import { ProfileStats } from './interfaces/profile-stats.interface';
 
 @Controller('users')
 export class UsersController {
@@ -29,5 +38,13 @@ export class UsersController {
     const token = req.headers.authorization.split(' ')[1];
     const userInfo = await this.usersService.getUserInfoFromToken(token);
     return this.usersService.updateUserName(userInfo.id, newName);
+  }
+
+  @UseGuards(AuthGuard('jwt'))
+  @Get('me/stats')
+  async getProfileStats(@Request() req): Promise<ProfileStats> {
+    const token = req.headers.authorization.split(' ')[1];
+    const userInfo = await this.usersService.getUserInfoFromToken(token);
+    return this.usersService.getProfileStats(userInfo.id);
   }
 }
