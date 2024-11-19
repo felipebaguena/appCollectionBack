@@ -30,4 +30,7 @@ export class User {
 
   @OneToMany(() => UserGame, (userGame) => userGame.user)
   userGames: UserGame[];
+
+  @Column({ nullable: true })
+  avatarPath: string;
 }

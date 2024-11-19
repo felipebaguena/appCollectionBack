@@ -7,6 +7,8 @@ import { JwtService } from '@nestjs/jwt';
 import { RolesService } from '../roles/roles.service';
 import { ProfileStats } from './interfaces/profile-stats.interface';
 import { UpdateUserDto } from './interfaces/update-user.interface';
+import { unlink } from 'fs/promises';
+import { join } from 'path';
 
 @Injectable()
 export class UsersService {
@@ -49,13 +51,13 @@ export class UsersService {
     return this.usersRepository.findOne({
       where: { email },
       relations: ['role'],
-      select: ['id', 'name', 'nik', 'email', 'password', 'role'],
+      select: ['id', 'name', 'nik', 'email', 'password', 'role', 'avatarPath'],
     });
   }
 
   async getUserInfoFromToken(
     token: string,
-  ): Promise<{ id: number; name: string }> {
+  ): Promise<{ id: number; name: string; avatarPath: string }> {
     try {
       const payload = this.jwtService.verify(token);
       const user = await this.usersRepository.findOne({
@@ -64,7 +66,11 @@ export class UsersService {
       if (!user) {
         throw new UnauthorizedException('Usuario no encontrado');
       }
-      return { id: user.id, name: user.name };
+      return {
+        id: user.id,
+        name: user.name,
+        avatarPath: user.avatarPath,
+      };
     } catch (error) {
       throw new UnauthorizedException('Token inválido');
     }
@@ -157,7 +163,7 @@ export class UsersService {
   async updateUser(
     userId: number,
     updateData: UpdateUserDto,
-  ): Promise<{ id: number; name: string; nik: string }> {
+  ): Promise<{ id: number; name: string; nik: string; avatarPath: string }> {
     const user = await this.usersRepository.findOne({ where: { id: userId } });
     if (!user) {
       throw new UnauthorizedException('Usuario no encontrado');
@@ -183,6 +189,35 @@ export class UsersService {
       id: user.id,
       name: user.name,
       nik: user.nik,
+      avatarPath: user.avatarPath,
+    };
+  }
+
+  async updateAvatar(
+    userId: number,
+    file: Express.Multer.File,
+  ): Promise<{ id: number; avatarPath: string }> {
+    const user = await this.usersRepository.findOne({ where: { id: userId } });
+    if (!user) {
+      throw new UnauthorizedException('Usuario no encontrado');
+    }
+
+    // Si existe un avatar previo, lo eliminamos
+    if (user.avatarPath) {
+      try {
+        await unlink(join(process.cwd(), user.avatarPath));
+      } catch (error) {
+        console.log('Previous avatar file not found');
+      }
+    }
+
+    // Actualizamos la ruta del nuevo avatar
+    user.avatarPath = file.path;
+    await this.usersRepository.save(user);
+
+    return {
+      id: user.id,
+      avatarPath: user.avatarPath,
     };
   }
 }
