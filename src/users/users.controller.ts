@@ -11,6 +11,7 @@ import { UsersService } from './users.service';
 import { User } from './user.entity';
 import { AuthGuard } from '@nestjs/passport';
 import { ProfileStats } from './interfaces/profile-stats.interface';
+import { UpdateUserDto } from './interfaces/update-user.interface';
 
 @Controller('users')
 export class UsersController {
@@ -34,10 +35,10 @@ export class UsersController {
 
   @UseGuards(AuthGuard('jwt'))
   @Put('me')
-  async updateName(@Request() req, @Body('name') newName: string) {
+  async updateUser(@Request() req, @Body() updateData: UpdateUserDto) {
     const token = req.headers.authorization.split(' ')[1];
     const userInfo = await this.usersService.getUserInfoFromToken(token);
-    return this.usersService.updateUserName(userInfo.id, newName);
+    return this.usersService.updateUser(userInfo.id, updateData);
   }
 
   @UseGuards(AuthGuard('jwt'))

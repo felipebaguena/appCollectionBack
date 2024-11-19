@@ -6,6 +6,7 @@ import * as bcrypt from 'bcrypt';
 import { JwtService } from '@nestjs/jwt';
 import { RolesService } from '../roles/roles.service';
 import { ProfileStats } from './interfaces/profile-stats.interface';
+import { UpdateUserDto } from './interfaces/update-user.interface';
 
 @Injectable()
 export class UsersService {
@@ -17,10 +18,21 @@ export class UsersService {
   ) {}
 
   async create(user: Partial<User>): Promise<User> {
+    // Verificar si el nik ya existe
+    if (user.nik) {
+      const existingUser = await this.usersRepository.findOne({
+        where: { nik: user.nik },
+      });
+      if (existingUser) {
+        throw new UnauthorizedException('El nik ya está en uso');
+      }
+    }
+
     if (user.password) {
       const salt = await bcrypt.genSalt();
       user.password = await bcrypt.hash(user.password, salt);
     }
+
     const defaultRole = await this.rolesService.findOrCreate('USER');
     const newUser = this.usersRepository.create({
       ...user,
@@ -37,7 +49,7 @@ export class UsersService {
     return this.usersRepository.findOne({
       where: { email },
       relations: ['role'],
-      select: ['id', 'name', 'email', 'password', 'role'],
+      select: ['id', 'name', 'nik', 'email', 'password', 'role'],
     });
   }
 
@@ -56,19 +68,6 @@ export class UsersService {
     } catch (error) {
       throw new UnauthorizedException('Token inválido');
     }
-  }
-
-  async updateUserName(
-    userId: number,
-    newName: string,
-  ): Promise<{ id: number; name: string }> {
-    const user = await this.usersRepository.findOne({ where: { id: userId } });
-    if (!user) {
-      throw new UnauthorizedException('Usuario no encontrado');
-    }
-    user.name = newName;
-    await this.usersRepository.save(user);
-    return { id: user.id, name: user.name };
   }
 
   async updateRole(userId: number, roleName: string): Promise<User> {
@@ -152,6 +151,38 @@ export class UsersService {
         wishedGames: parseInt(totalStats.wishedGames) || 0,
         totalGames: parseInt(totalStats.totalGames) || 0,
       },
+    };
+  }
+
+  async updateUser(
+    userId: number,
+    updateData: UpdateUserDto,
+  ): Promise<{ id: number; name: string; nik: string }> {
+    const user = await this.usersRepository.findOne({ where: { id: userId } });
+    if (!user) {
+      throw new UnauthorizedException('Usuario no encontrado');
+    }
+
+    // Verificar si el nik ya existe si se está actualizando
+    if (updateData.nik) {
+      const existingUser = await this.usersRepository.findOne({
+        where: { nik: updateData.nik },
+      });
+      if (existingUser && existingUser.id !== userId) {
+        throw new UnauthorizedException('El nik ya está en uso');
+      }
+    }
+
+    // Actualizar solo los campos proporcionados
+    if (updateData.name) user.name = updateData.name;
+    if (updateData.nik) user.nik = updateData.nik;
+
+    await this.usersRepository.save(user);
+
+    return {
+      id: user.id,
+      name: user.name,
+      nik: user.nik,
     };
   }
 }
