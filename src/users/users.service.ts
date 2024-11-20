@@ -9,6 +9,7 @@ import { ProfileStats } from './interfaces/profile-stats.interface';
 import { UpdateUserDto } from './interfaces/update-user.interface';
 import { unlink } from 'fs/promises';
 import { join } from 'path';
+import { YearlyStats } from './interfaces/yearly-stats.interface';
 
 @Injectable()
 export class UsersService {
@@ -219,5 +220,80 @@ export class UsersService {
       id: user.id,
       avatarPath: user.avatarPath,
     };
+  }
+
+  async getYearlyStats(userId: number): Promise<YearlyStats> {
+    const oneYearAgo = new Date();
+    oneYearAgo.setFullYear(oneYearAgo.getFullYear() - 1);
+
+    const userGames = await this.usersRepository
+      .createQueryBuilder('user')
+      .leftJoinAndSelect('user.userGames', 'userGame')
+      .leftJoinAndSelect('userGame.game', 'game')
+      .leftJoinAndSelect('game.images', 'image', 'game.coverId = image.id')
+      .where('user.id = :userId', { userId })
+      .andWhere('userGame.addedAt >= :oneYearAgo', { oneYearAgo })
+      .orderBy('userGame.addedAt', 'DESC')
+      .getOne();
+
+    // Crear un objeto para almacenar los datos por mes
+    const monthlyData = new Map<
+      string,
+      {
+        owned: { count: number; games: any[] };
+        wished: { count: number; games: any[] };
+      }
+    >();
+
+    // Inicializar los últimos 12 meses
+    for (let i = 0; i < 12; i++) {
+      const date = new Date();
+      date.setMonth(date.getMonth() - i);
+      const monthKey = date.toISOString().substring(0, 7); // Formato: "YYYY-MM"
+      monthlyData.set(monthKey, {
+        owned: { count: 0, games: [] },
+        wished: { count: 0, games: [] },
+      });
+    }
+
+    // Procesar los juegos del usuario
+    userGames?.userGames.forEach((ug) => {
+      const monthKey = ug.addedAt.toISOString().substring(0, 7);
+      const monthData = monthlyData.get(monthKey);
+
+      if (monthData) {
+        const gameData = {
+          id: ug.game.id,
+          title: ug.game.title,
+          addedAt: ug.addedAt,
+          coverImage: ug.game.images?.[0]
+            ? {
+                id: ug.game.images[0].id,
+                path: ug.game.images[0].path,
+              }
+            : undefined,
+        };
+
+        if (ug.owned) {
+          monthData.owned.count++;
+          monthData.owned.games.push(gameData);
+        }
+        if (ug.wished) {
+          monthData.wished.count++;
+          monthData.wished.games.push(gameData);
+        }
+      }
+    });
+
+    // Convertir el Map a un array ordenado por mes
+    const months = Array.from(monthlyData.entries())
+      .map(([month, data]) => ({
+        month,
+        owned: data.owned,
+        wished: data.wished,
+      }))
+      .sort((a, b) => a.month.localeCompare(b.month));
+
+    return { months };
   }
 }

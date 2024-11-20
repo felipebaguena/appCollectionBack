@@ -17,6 +17,7 @@ import { UpdateUserDto } from './interfaces/update-user.interface';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { diskStorage } from 'multer';
 import { extname } from 'path';
+import { YearlyStats } from './interfaces/yearly-stats.interface';
 
 @Controller('users')
 export class UsersController {
@@ -82,5 +83,13 @@ export class UsersController {
     const token = req.headers.authorization.split(' ')[1];
     const userInfo = await this.usersService.getUserInfoFromToken(token);
     return this.usersService.getProfileStats(userInfo.id);
+  }
+
+  @UseGuards(AuthGuard('jwt'))
+  @Get('me/yearly-stats')
+  async getYearlyStats(@Request() req): Promise<YearlyStats> {
+    const token = req.headers.authorization.split(' ')[1];
+    const userInfo = await this.usersService.getUserInfoFromToken(token);
+    return this.usersService.getYearlyStats(userInfo.id);
   }
 }
