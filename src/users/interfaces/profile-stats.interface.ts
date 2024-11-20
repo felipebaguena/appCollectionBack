@@ -22,4 +22,10 @@ export interface ProfileStats {
     wishedGames: number;
     totalGames: number;
   };
+  favoritePlatform?: {
+    id: number;
+    name: string;
+    code: string;
+    gamesCount: number;
+  };
 }

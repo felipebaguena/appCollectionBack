@@ -124,6 +124,24 @@ export class UsersService {
       ])
       .getRawOne();
 
+    // Obtener la plataforma favorita
+    const favoritePlatform = await this.usersRepository
+      .createQueryBuilder('user')
+      .leftJoin('user.userGames', 'userGame')
+      .leftJoin('userGame.platforms', 'platform')
+      .where('user.id = :userId', { userId })
+      .andWhere('userGame.owned = :owned', { owned: true })
+      .select([
+        'platform.id as id',
+        'platform.name as name',
+        'platform.code as code',
+        'COUNT(userGame.id) as gamesCount',
+      ])
+      .groupBy('platform.id')
+      .orderBy('gamesCount', 'DESC')
+      .limit(1)
+      .getRawOne();
+
     return {
       recentOwnedGames:
         recentOwnedGames?.userGames
@@ -158,6 +176,14 @@ export class UsersService {
         wishedGames: parseInt(totalStats.wishedGames) || 0,
         totalGames: parseInt(totalStats.totalGames) || 0,
       },
+      favoritePlatform: favoritePlatform
+        ? {
+            id: favoritePlatform.id,
+            name: favoritePlatform.name,
+            code: favoritePlatform.code,
+            gamesCount: parseInt(favoritePlatform.gamesCount),
+          }
+        : undefined,
     };
   }
 
