@@ -142,6 +142,44 @@ export class UsersService {
       .limit(1)
       .getRawOne();
 
+    // Obtener el género favorito
+    const favoriteGenre = await this.usersRepository
+      .createQueryBuilder('user')
+      .leftJoin('user.userGames', 'userGame')
+      .leftJoin('userGame.game', 'game')
+      .leftJoin('game.genres', 'genre')
+      .where('user.id = :userId', { userId })
+      .andWhere('userGame.owned = :owned', { owned: true })
+      .select([
+        'genre.id as id',
+        'genre.name as name',
+        'genre.code as code',
+        'COUNT(userGame.id) as gamesCount',
+      ])
+      .groupBy('genre.id')
+      .orderBy('gamesCount', 'DESC')
+      .limit(1)
+      .getRawOne();
+
+    // Obtener el desarrollador favorito
+    const favoriteDeveloper = await this.usersRepository
+      .createQueryBuilder('user')
+      .leftJoin('user.userGames', 'userGame')
+      .leftJoin('userGame.game', 'game')
+      .leftJoin('game.developers', 'developer')
+      .where('user.id = :userId', { userId })
+      .andWhere('userGame.owned = :owned', { owned: true })
+      .select([
+        'developer.id as id',
+        'developer.name as name',
+        'developer.code as code',
+        'COUNT(userGame.id) as gamesCount',
+      ])
+      .groupBy('developer.id')
+      .orderBy('gamesCount', 'DESC')
+      .limit(1)
+      .getRawOne();
+
     return {
       recentOwnedGames:
         recentOwnedGames?.userGames
@@ -182,6 +220,22 @@ export class UsersService {
             name: favoritePlatform.name,
             code: favoritePlatform.code,
             gamesCount: parseInt(favoritePlatform.gamesCount),
+          }
+        : undefined,
+      favoriteGenre: favoriteGenre
+        ? {
+            id: favoriteGenre.id,
+            name: favoriteGenre.name,
+            code: favoriteGenre.code,
+            gamesCount: parseInt(favoriteGenre.gamesCount),
+          }
+        : undefined,
+      favoriteDeveloper: favoriteDeveloper
+        ? {
+            id: favoriteDeveloper.id,
+            name: favoriteDeveloper.name,
+            code: favoriteDeveloper.code,
+            gamesCount: parseInt(favoriteDeveloper.gamesCount),
           }
         : undefined,
     };

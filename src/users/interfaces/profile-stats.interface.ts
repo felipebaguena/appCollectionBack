@@ -28,4 +28,16 @@ export interface ProfileStats {
     code: string;
     gamesCount: number;
   };
+  favoriteGenre?: {
+    id: number;
+    name: string;
+    code: string;
+    gamesCount: number;
+  };
+  favoriteDeveloper?: {
+    id: number;
+    name: string;
+    code: string;
+    gamesCount: number;
+  };
 }
