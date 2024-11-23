@@ -7,6 +7,7 @@ import {
 } from 'typeorm';
 import { Role } from '../roles/role.entity';
 import { UserGame } from '../user-games/user-game.entity';
+import { Friendship } from './friendship.entity';
 
 @Entity()
 export class User {
@@ -33,4 +34,10 @@ export class User {
 
   @Column({ nullable: true })
   avatarPath: string;
+
+  @OneToMany(() => Friendship, (friendship) => friendship.sender)
+  sentFriendships: Friendship[];
+
+  @OneToMany(() => Friendship, (friendship) => friendship.receiver)
+  receivedFriendships: Friendship[];
 }

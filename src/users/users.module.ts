@@ -6,24 +6,25 @@ import { UsersService } from './users.service';
 import { User } from './user.entity';
 import { RolesModule } from '../roles/roles.module';
 import { ConfigModule, ConfigService } from '@nestjs/config';
+import { Friendship } from './friendship.entity';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([User]),
+    TypeOrmModule.forFeature([User, Friendship]),
     JwtModule.registerAsync({
       imports: [ConfigModule],
       useFactory: async (configService: ConfigService) => ({
         secret: configService.get<string>('JWT_SECRET'),
-        signOptions: { 
+        signOptions: {
           expiresIn: configService.get<string>('JWT_EXPIRATION') || '1h',
         },
       }),
       inject: [ConfigService],
     }),
-    RolesModule
+    RolesModule,
   ],
   providers: [UsersService],
   controllers: [UsersController],
-  exports: [UsersService]
+  exports: [UsersService],
 })
 export class UsersModule {}

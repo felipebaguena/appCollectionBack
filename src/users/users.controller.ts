@@ -8,6 +8,8 @@ import {
   Put,
   UseInterceptors,
   UploadedFile,
+  Param,
+  Delete,
 } from '@nestjs/common';
 import { UsersService } from './users.service';
 import { User } from './user.entity';
@@ -91,5 +93,53 @@ export class UsersController {
     const token = req.headers.authorization.split(' ')[1];
     const userInfo = await this.usersService.getUserInfoFromToken(token);
     return this.usersService.getYearlyStats(userInfo.id);
+  }
+
+  @UseGuards(AuthGuard('jwt'))
+  @Post('me/friends/requests')
+  async sendFriendRequest(@Request() req, @Body('nik') receiverNik: string) {
+    const token = req.headers.authorization.split(' ')[1];
+    const userInfo = await this.usersService.getUserInfoFromToken(token);
+    return this.usersService.sendFriendRequest(userInfo.id, receiverNik);
+  }
+
+  @UseGuards(AuthGuard('jwt'))
+  @Put('me/friends/requests/:requestId')
+  async respondToFriendRequest(
+    @Request() req,
+    @Param('requestId') requestId: number,
+    @Body('accept') accept: boolean,
+  ) {
+    const token = req.headers.authorization.split(' ')[1];
+    const userInfo = await this.usersService.getUserInfoFromToken(token);
+    return this.usersService.respondToFriendRequest(
+      userInfo.id,
+      requestId,
+      accept,
+    );
+  }
+
+  @UseGuards(AuthGuard('jwt'))
+  @Get('me/friends/requests')
+  async getFriendRequests(@Request() req) {
+    const token = req.headers.authorization.split(' ')[1];
+    const userInfo = await this.usersService.getUserInfoFromToken(token);
+    return this.usersService.getFriendRequests(userInfo.id);
+  }
+
+  @UseGuards(AuthGuard('jwt'))
+  @Get('me/friends')
+  async getFriends(@Request() req) {
+    const token = req.headers.authorization.split(' ')[1];
+    const userInfo = await this.usersService.getUserInfoFromToken(token);
+    return this.usersService.getFriends(userInfo.id);
+  }
+
+  @UseGuards(AuthGuard('jwt'))
+  @Delete('me/friends/:friendId')
+  async removeFriend(@Request() req, @Param('friendId') friendId: number) {
+    const token = req.headers.authorization.split(' ')[1];
+    const userInfo = await this.usersService.getUserInfoFromToken(token);
+    return this.usersService.removeFriend(userInfo.id, friendId);
   }
 }

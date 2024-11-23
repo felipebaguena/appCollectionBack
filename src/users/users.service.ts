@@ -10,12 +10,16 @@ import { UpdateUserDto } from './interfaces/update-user.interface';
 import { unlink } from 'fs/promises';
 import { join } from 'path';
 import { YearlyStats } from './interfaces/yearly-stats.interface';
+import { Friendship, FriendshipStatus } from './friendship.entity';
+import { FriendRequest } from './interfaces/friend-request.interface';
 
 @Injectable()
 export class UsersService {
   constructor(
     @InjectRepository(User)
     private usersRepository: Repository<User>,
+    @InjectRepository(Friendship)
+    private friendshipsRepository: Repository<Friendship>,
     private jwtService: JwtService,
     private rolesService: RolesService,
   ) {}
@@ -375,5 +379,134 @@ export class UsersService {
       .sort((a, b) => a.month.localeCompare(b.month));
 
     return { months };
+  }
+
+  async sendFriendRequest(
+    senderId: number,
+    receiverNik: string,
+  ): Promise<void> {
+    const receiver = await this.usersRepository.findOne({
+      where: { nik: receiverNik },
+    });
+    if (!receiver) {
+      throw new UnauthorizedException('Usuario no encontrado');
+    }
+
+    const existingFriendship = await this.friendshipsRepository.findOne({
+      where: [
+        { sender: { id: senderId }, receiver: { id: receiver.id } },
+        { sender: { id: receiver.id }, receiver: { id: senderId } },
+      ],
+    });
+
+    if (existingFriendship) {
+      throw new UnauthorizedException('Ya existe una solicitud de amistad');
+    }
+
+    const friendship = this.friendshipsRepository.create({
+      sender: { id: senderId },
+      receiver: { id: receiver.id },
+      status: FriendshipStatus.PENDING,
+    });
+
+    await this.friendshipsRepository.save(friendship);
+  }
+
+  async respondToFriendRequest(
+    userId: number,
+    requestId: number,
+    accept: boolean,
+  ): Promise<void> {
+    const friendship = await this.friendshipsRepository.findOne({
+      where: {
+        id: requestId,
+        receiver: { id: userId },
+        status: FriendshipStatus.PENDING,
+      },
+    });
+
+    if (!friendship) {
+      throw new UnauthorizedException('Solicitud no encontrada');
+    }
+
+    friendship.status = accept
+      ? FriendshipStatus.ACCEPTED
+      : FriendshipStatus.REJECTED;
+    await this.friendshipsRepository.save(friendship);
+  }
+
+  async getFriendRequests(userId: number): Promise<FriendRequest[]> {
+    const requests = await this.friendshipsRepository.find({
+      where: {
+        receiver: { id: userId },
+        status: FriendshipStatus.PENDING,
+      },
+      relations: ['sender'],
+      order: { createdAt: 'DESC' },
+    });
+
+    return requests.map((request) => ({
+      id: request.id,
+      sender: {
+        id: request.sender.id,
+        name: request.sender.name,
+        nik: request.sender.nik,
+        avatarPath: request.sender.avatarPath,
+      },
+      createdAt: request.createdAt,
+    }));
+  }
+
+  async getFriends(userId: number): Promise<
+    {
+      id: number;
+      name: string;
+      nik: string;
+      avatarPath?: string;
+    }[]
+  > {
+    const friendships = await this.friendshipsRepository.find({
+      where: [
+        { sender: { id: userId }, status: FriendshipStatus.ACCEPTED },
+        { receiver: { id: userId }, status: FriendshipStatus.ACCEPTED },
+      ],
+      relations: ['sender', 'receiver'],
+    });
+
+    return friendships.map((friendship) => {
+      const friend =
+        friendship.sender.id === userId
+          ? friendship.receiver
+          : friendship.sender;
+      return {
+        id: friend.id,
+        name: friend.name,
+        nik: friend.nik,
+        avatarPath: friend.avatarPath,
+      };
+    });
+  }
+
+  async removeFriend(userId: number, friendId: number): Promise<void> {
+    const friendship = await this.friendshipsRepository.findOne({
+      where: [
+        {
+          sender: { id: userId },
+          receiver: { id: friendId },
+          status: FriendshipStatus.ACCEPTED,
+        },
+        {
+          sender: { id: friendId },
+          receiver: { id: userId },
+          status: FriendshipStatus.ACCEPTED,
+        },
+      ],
+    });
+
+    if (!friendship) {
+      throw new UnauthorizedException('Amistad no encontrada');
+    }
+
+    await this.friendshipsRepository.remove(friendship);
   }
 }
