@@ -97,10 +97,17 @@ export class UsersController {
 
   @UseGuards(AuthGuard('jwt'))
   @Post('me/friends/requests')
-  async sendFriendRequest(@Request() req, @Body('nik') receiverNik: string) {
+  async sendFriendRequest(
+    @Request() req,
+    @Body() body: { nik: string; message?: string },
+  ) {
     const token = req.headers.authorization.split(' ')[1];
     const userInfo = await this.usersService.getUserInfoFromToken(token);
-    return this.usersService.sendFriendRequest(userInfo.id, receiverNik);
+    return this.usersService.sendFriendRequest(
+      userInfo.id,
+      body.nik,
+      body.message,
+    );
   }
 
   @UseGuards(AuthGuard('jwt'))

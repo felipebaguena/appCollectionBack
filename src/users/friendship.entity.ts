@@ -33,4 +33,7 @@ export class Friendship {
 
   @CreateDateColumn()
   createdAt: Date;
+
+  @Column({ nullable: true, length: 200 })
+  message?: string;
 }

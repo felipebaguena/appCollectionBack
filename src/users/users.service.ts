@@ -384,6 +384,7 @@ export class UsersService {
   async sendFriendRequest(
     senderId: number,
     receiverNik: string,
+    message?: string,
   ): Promise<void> {
     const receiver = await this.usersRepository.findOne({
       where: { nik: receiverNik },
@@ -407,6 +408,7 @@ export class UsersService {
       sender: { id: senderId },
       receiver: { id: receiver.id },
       status: FriendshipStatus.PENDING,
+      message: message,
     });
 
     await this.friendshipsRepository.save(friendship);
@@ -453,6 +455,7 @@ export class UsersService {
         nik: request.sender.nik,
         avatarPath: request.sender.avatarPath,
       },
+      message: request.message,
       createdAt: request.createdAt,
     }));
   }

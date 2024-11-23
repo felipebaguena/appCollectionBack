@@ -6,5 +6,6 @@ export interface FriendRequest {
     nik: string;
     avatarPath?: string;
   };
+  message?: string;
   createdAt: Date;
 }
