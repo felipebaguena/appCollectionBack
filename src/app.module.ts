@@ -30,6 +30,7 @@ import { ArticleImagesModule } from './article-images/article-images.module';
 import { ArticleTemplatesModule } from './article-templates/article-templates.module';
 import { ArticleTemplate } from './article-templates/article-template.entity';
 import { Friendship } from './users/friendship.entity';
+import { Message } from './users/message.entity';
 
 @Module({
   imports: [
@@ -56,6 +57,7 @@ import { Friendship } from './users/friendship.entity';
         ArticleImage,
         ArticleTemplate,
         Friendship,
+        Message,
       ],
       synchronize: true,
       logging: true,

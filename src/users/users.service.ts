@@ -13,6 +13,8 @@ import { YearlyStats } from './interfaces/yearly-stats.interface';
 import { Friendship, FriendshipStatus } from './friendship.entity';
 import { FriendRequest } from './interfaces/friend-request.interface';
 import { FriendDetail } from './interfaces/friend-detail.interface';
+import { Message } from './message.entity';
+import { MessageDto } from './interfaces/message.interface';
 
 @Injectable()
 export class UsersService {
@@ -23,6 +25,8 @@ export class UsersService {
     private friendshipsRepository: Repository<Friendship>,
     private jwtService: JwtService,
     private rolesService: RolesService,
+    @InjectRepository(Message)
+    private messagesRepository: Repository<Message>,
   ) {}
 
   async create(user: Partial<User>): Promise<User> {
@@ -560,6 +564,119 @@ export class UsersService {
       friendsSince: friendship.createdAt,
       profileStats,
       yearlyStats,
+    };
+  }
+
+  async sendMessage(
+    senderId: number,
+    receiverId: number,
+    content: string,
+  ): Promise<MessageDto> {
+    const friendship = await this.friendshipsRepository.findOne({
+      where: [
+        {
+          sender: { id: senderId },
+          receiver: { id: receiverId },
+          status: FriendshipStatus.ACCEPTED,
+        },
+        {
+          sender: { id: receiverId },
+          receiver: { id: senderId },
+          status: FriendshipStatus.ACCEPTED,
+        },
+      ],
+    });
+
+    if (!friendship) {
+      throw new UnauthorizedException(
+        'Solo puedes enviar mensajes a tus amigos',
+      );
+    }
+
+    const message = this.messagesRepository.create({
+      sender: { id: senderId },
+      receiver: { id: receiverId },
+      content,
+    });
+
+    const savedMessage = await this.messagesRepository.save(message);
+    return this.formatMessage(savedMessage);
+  }
+
+  async getConversation(
+    userId: number,
+    friendId: number,
+  ): Promise<MessageDto[]> {
+    const friendship = await this.friendshipsRepository.findOne({
+      where: [
+        {
+          sender: { id: userId },
+          receiver: { id: friendId },
+          status: FriendshipStatus.ACCEPTED,
+        },
+        {
+          sender: { id: friendId },
+          receiver: { id: userId },
+          status: FriendshipStatus.ACCEPTED,
+        },
+      ],
+    });
+
+    if (!friendship) {
+      throw new UnauthorizedException('Solo puedes ver mensajes de tus amigos');
+    }
+
+    const messages = await this.messagesRepository.find({
+      where: [
+        { sender: { id: userId }, receiver: { id: friendId } },
+        { sender: { id: friendId }, receiver: { id: userId } },
+      ],
+      relations: ['sender', 'receiver'],
+      order: { createdAt: 'DESC' },
+      take: 50, // Limitar a los últimos 50 mensajes
+    });
+
+    // Marcar como leídos los mensajes recibidos
+    const unreadMessages = messages.filter(
+      (msg) => msg.receiver.id === userId && !msg.read,
+    );
+    if (unreadMessages.length > 0) {
+      await this.messagesRepository.update(
+        unreadMessages.map((msg) => msg.id),
+        { read: true },
+      );
+    }
+
+    return messages.map((msg) => this.formatMessage(msg));
+  }
+
+  async getUnreadMessagesCount(userId: number): Promise<number> {
+    return this.messagesRepository.count({
+      where: {
+        receiver: { id: userId },
+        read: false,
+      },
+    });
+  }
+
+  private formatMessage(message: Message): MessageDto {
+    return {
+      id: message.id,
+      content: message.content,
+      createdAt: message.createdAt,
+      read: message.read,
+      sender: {
+        id: message.sender.id,
+        name: message.sender.name,
+        nik: message.sender.nik,
+        avatarPath: message.sender.avatarPath,
+      },
+      receiver: {
+        id: message.receiver.id,
+        name: message.receiver.name,
+        nik: message.receiver.nik,
+        avatarPath: message.receiver.avatarPath,
+      },
     };
   }
 }

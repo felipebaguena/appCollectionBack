@@ -7,10 +7,11 @@ import { User } from './user.entity';
 import { RolesModule } from '../roles/roles.module';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { Friendship } from './friendship.entity';
+import { Message } from './message.entity';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([User, Friendship]),
+    TypeOrmModule.forFeature([User, Friendship, Message]),
     JwtModule.registerAsync({
       imports: [ConfigModule],
       useFactory: async (configService: ConfigService) => ({

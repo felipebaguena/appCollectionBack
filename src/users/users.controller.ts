@@ -161,4 +161,32 @@ export class UsersController {
     const userInfo = await this.usersService.getUserInfoFromToken(token);
     return this.usersService.getFriendDetail(userInfo.id, friendId);
   }
+
+  @UseGuards(AuthGuard('jwt'))
+  @Post('me/friends/:friendId/messages')
+  async sendMessage(
+    @Request() req,
+    @Param('friendId') friendId: number,
+    @Body('content') content: string,
+  ) {
+    const token = req.headers.authorization.split(' ')[1];
+    const userInfo = await this.usersService.getUserInfoFromToken(token);
+    return this.usersService.sendMessage(userInfo.id, friendId, content);
+  }
+
+  @UseGuards(AuthGuard('jwt'))
+  @Get('me/friends/:friendId/messages')
+  async getConversation(@Request() req, @Param('friendId') friendId: number) {
+    const token = req.headers.authorization.split(' ')[1];
+    const userInfo = await this.usersService.getUserInfoFromToken(token);
+    return this.usersService.getConversation(userInfo.id, friendId);
+  }
+
+  @UseGuards(AuthGuard('jwt'))
+  @Get('me/messages/unread-count')
+  async getUnreadMessagesCount(@Request() req) {
+    const token = req.headers.authorization.split(' ')[1];
+    const userInfo = await this.usersService.getUserInfoFromToken(token);
+    return this.usersService.getUnreadMessagesCount(userInfo.id);
+  }
 }
