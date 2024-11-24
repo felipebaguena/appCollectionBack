@@ -15,6 +15,7 @@ import { FriendRequest } from './interfaces/friend-request.interface';
 import { FriendDetail } from './interfaces/friend-detail.interface';
 import { Message } from './message.entity';
 import { MessageDto } from './interfaces/message.interface';
+import { ConversationPreview } from './interfaces/conversation-preview.interface';
 
 @Injectable()
 export class UsersService {
@@ -678,5 +679,63 @@ export class UsersService {
         avatarPath: message.receiver.avatarPath,
       },
     };
+  }
+
+  async getConversations(userId: number): Promise<ConversationPreview[]> {
+    // Obtener todas las conversaciones donde el usuario es sender o receiver
+    const conversations = await this.messagesRepository
+      .createQueryBuilder('message')
+      .select(
+        'CASE WHEN message.senderId = :userId THEN message.receiverId ELSE message.senderId END',
+        'friendId',
+      )
+      .addSelect('MAX(message.id)', 'lastMessageId')
+      .addSelect(
+        'COUNT(CASE WHEN message.receiverId = :userId AND message.read = false THEN 1 END)',
+        'unreadCount',
+      )
+      .where('message.senderId = :userId OR message.receiverId = :userId')
+      .groupBy('friendId')
+      .setParameter('userId', userId)
+      .getRawMany();
+
+    const conversationPreviews: ConversationPreview[] = [];
+
+    for (const conv of conversations) {
+      const friend = await this.usersRepository.findOne({
+        where: { id: conv.friendId },
+        select: ['id', 'name', 'nik', 'avatarPath'],
+      });
+
+      const lastMessage = await this.messagesRepository.findOne({
+        where: { id: conv.lastMessageId },
+        relations: ['sender', 'receiver'],
+      });
+
+      if (friend && lastMessage) {
+        conversationPreviews.push({
+          friend: {
+            id: friend.id,
+            name: friend.name,
+            nik: friend.nik,
+            avatarPath: friend.avatarPath,
+          },
+          lastMessage: {
+            id: lastMessage.id,
+            content: lastMessage.content,
+            createdAt: lastMessage.createdAt,
+            read: lastMessage.read,
+            isFromMe: lastMessage.sender.id === userId,
+          },
+          unreadCount: parseInt(conv.unreadCount) || 0,
+        });
+      }
+    }
+
+    // Ordenar por fecha del último mensaje
+    return conversationPreviews.sort(
+      (a, b) =>
+        b.lastMessage.createdAt.getTime() - a.lastMessage.createdAt.getTime(),
+    );
   }
 }

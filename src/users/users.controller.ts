@@ -189,4 +189,12 @@ export class UsersController {
     const userInfo = await this.usersService.getUserInfoFromToken(token);
     return this.usersService.getUnreadMessagesCount(userInfo.id);
   }
+
+  @UseGuards(AuthGuard('jwt'))
+  @Get('me/conversations')
+  async getConversations(@Request() req) {
+    const token = req.headers.authorization.split(' ')[1];
+    const userInfo = await this.usersService.getUserInfoFromToken(token);
+    return this.usersService.getConversations(userInfo.id);
+  }
 }
