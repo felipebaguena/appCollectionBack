@@ -20,6 +20,7 @@ import { FileInterceptor } from '@nestjs/platform-express';
 import { diskStorage } from 'multer';
 import { extname } from 'path';
 import { YearlyStats } from './interfaces/yearly-stats.interface';
+import { FriendDetail } from './interfaces/friend-detail.interface';
 
 @Controller('users')
 export class UsersController {
@@ -148,5 +149,16 @@ export class UsersController {
     const token = req.headers.authorization.split(' ')[1];
     const userInfo = await this.usersService.getUserInfoFromToken(token);
     return this.usersService.removeFriend(userInfo.id, friendId);
+  }
+
+  @UseGuards(AuthGuard('jwt'))
+  @Get('me/friends/:friendId/detail')
+  async getFriendDetail(
+    @Request() req,
+    @Param('friendId') friendId: number,
+  ): Promise<FriendDetail> {
+    const token = req.headers.authorization.split(' ')[1];
+    const userInfo = await this.usersService.getUserInfoFromToken(token);
+    return this.usersService.getFriendDetail(userInfo.id, friendId);
   }
 }

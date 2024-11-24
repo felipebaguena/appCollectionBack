@@ -12,6 +12,7 @@ import { join } from 'path';
 import { YearlyStats } from './interfaces/yearly-stats.interface';
 import { Friendship, FriendshipStatus } from './friendship.entity';
 import { FriendRequest } from './interfaces/friend-request.interface';
+import { FriendDetail } from './interfaces/friend-detail.interface';
 
 @Injectable()
 export class UsersService {
@@ -511,5 +512,54 @@ export class UsersService {
     }
 
     await this.friendshipsRepository.remove(friendship);
+  }
+
+  async getFriendDetail(
+    userId: number,
+    friendId: number,
+  ): Promise<FriendDetail> {
+    const friendship = await this.friendshipsRepository
+      .createQueryBuilder('friendship')
+      .where([
+        {
+          sender: { id: userId },
+          receiver: { id: friendId },
+          status: FriendshipStatus.ACCEPTED,
+        },
+        {
+          sender: { id: friendId },
+          receiver: { id: userId },
+          status: FriendshipStatus.ACCEPTED,
+        },
+      ])
+      .select(['friendship.createdAt'])
+      .getOne();
+
+    if (!friendship) {
+      throw new UnauthorizedException('No eres amigo de este usuario');
+    }
+
+    // Obtener información básica del amigo
+    const friend = await this.usersRepository.findOne({
+      where: { id: friendId },
+      select: ['id', 'nik', 'avatarPath'],
+    });
+
+    if (!friend) {
+      throw new UnauthorizedException('Usuario no encontrado');
+    }
+
+    // Obtener stats
+    const profileStats = await this.getProfileStats(friendId);
+    const yearlyStats = await this.getYearlyStats(friendId);
+
+    return {
+      id: friend.id,
+      nik: friend.nik,
+      avatarPath: friend.avatarPath,
+      friendsSince: friendship.createdAt,
+      profileStats,
+      yearlyStats,
+    };
   }
 }

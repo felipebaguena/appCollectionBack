@@ -440,8 +440,8 @@ export class GamesService {
         name: string;
       }[];
       inCollection: boolean;
-      owned: boolean; // Añadir
-      wished: boolean; // Añadir
+      owned: boolean;
+      wished: boolean;
     }[];
     totalItems: number;
     totalPages: number;
@@ -467,8 +467,8 @@ export class GamesService {
         'image.id as image_id',
         'image.path as image_path',
         'MAX(userGame.id) as userGame_id',
-        'MAX(userGame.owned) as game_owned', // Añadir
-        'MAX(userGame.wished) as game_wished', // Añadir
+        'MAX(userGame.owned) as game_owned',
+        'MAX(userGame.wished) as game_wished',
         'GROUP_CONCAT(DISTINCT platform.id) as platform_ids',
         'GROUP_CONCAT(DISTINCT platform.name) as platform_names',
       ])
@@ -583,8 +583,8 @@ export class GamesService {
             }))
           : [],
         inCollection: Boolean(game.userGame_id),
-        owned: Boolean(game.game_owned), // Añadir
-        wished: Boolean(game.game_wished), // Añadir
+        owned: Boolean(game.game_owned),
+        wished: Boolean(game.game_wished),
       })),
       totalItems,
       totalPages: Math.ceil(totalItems / limit),
@@ -593,7 +593,7 @@ export class GamesService {
 
   async searchGames(title: string): Promise<Game[]> {
     if (!title) {
-      return []; // Si no hay título, devolvemos array vacío
+      return [];
     }
 
     const queryBuilder = this.gamesRepository
