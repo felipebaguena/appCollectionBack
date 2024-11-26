@@ -1,6 +1,6 @@
 import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { Repository, Not } from 'typeorm';
 import { User } from './user.entity';
 import * as bcrypt from 'bcrypt';
 import { JwtService } from '@nestjs/jwt';
@@ -16,6 +16,7 @@ import { FriendDetail } from './interfaces/friend-detail.interface';
 import { Message } from './message.entity';
 import { MessageDto } from './interfaces/message.interface';
 import { ConversationPreview } from './interfaces/conversation-preview.interface';
+import { UserBasic } from './interfaces/user-basic.interface';
 
 @Injectable()
 export class UsersService {
@@ -737,5 +738,54 @@ export class UsersService {
       (a, b) =>
         b.lastMessage.createdAt.getTime() - a.lastMessage.createdAt.getTime(),
     );
+  }
+
+  async readBasic(userId: number, nikFilter?: string): Promise<UserBasic[]> {
+    // Crear query builder base
+    const queryBuilder = this.usersRepository
+      .createQueryBuilder('user')
+      .select(['user.id', 'user.nik', 'user.avatarPath'])
+      .where('user.id != :userId', { userId });
+
+    // Añadir filtro por nik si existe
+    if (nikFilter) {
+      queryBuilder.andWhere('LOWER(user.nik) LIKE LOWER(:nikFilter)', {
+        nikFilter: `%${nikFilter}%`,
+      });
+    }
+
+    const users = await queryBuilder.limit(10).getMany();
+
+    // Obtener todas las amistades (aceptadas y pendientes)
+    const friendships = await this.friendshipsRepository.find({
+      where: [{ sender: { id: userId } }, { receiver: { id: userId } }],
+      relations: ['sender', 'receiver'],
+    });
+
+    // Crear Sets para búsqueda eficiente
+    const friendIds = new Set(
+      friendships
+        .filter((f) => f.status === FriendshipStatus.ACCEPTED)
+        .map((f) => (f.sender.id === userId ? f.receiver.id : f.sender.id)),
+    );
+
+    const pendingRequestIds = new Set(
+      friendships
+        .filter((f) => f.status === FriendshipStatus.PENDING)
+        .map((f) => {
+          // Si el usuario actual es el sender, el request está pendiente para el receiver
+          // Si el usuario actual es el receiver, el request está pendiente para el sender
+          return f.sender.id === userId ? f.receiver.id : f.sender.id;
+        }),
+    );
+
+    // Mapear resultados incluyendo ambos estados
+    return users.map((user) => ({
+      id: user.id,
+      nik: user.nik,
+      avatarPath: user.avatarPath,
+      isFriend: friendIds.has(user.id),
+      hasPendingFriendRequest: pendingRequestIds.has(user.id),
+    }));
   }
 }

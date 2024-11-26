@@ -10,6 +10,7 @@ import {
   UploadedFile,
   Param,
   Delete,
+  Query,
 } from '@nestjs/common';
 import { UsersService } from './users.service';
 import { User } from './user.entity';
@@ -21,6 +22,7 @@ import { diskStorage } from 'multer';
 import { extname } from 'path';
 import { YearlyStats } from './interfaces/yearly-stats.interface';
 import { FriendDetail } from './interfaces/friend-detail.interface';
+import { UserBasic } from './interfaces/user-basic.interface';
 
 @Controller('users')
 export class UsersController {
@@ -196,5 +198,16 @@ export class UsersController {
     const token = req.headers.authorization.split(' ')[1];
     const userInfo = await this.usersService.getUserInfoFromToken(token);
     return this.usersService.getConversations(userInfo.id);
+  }
+
+  @UseGuards(AuthGuard('jwt'))
+  @Get('basic')
+  async readBasic(
+    @Request() req,
+    @Query('nik') nik?: string,
+  ): Promise<UserBasic[]> {
+    const token = req.headers.authorization.split(' ')[1];
+    const userInfo = await this.usersService.getUserInfoFromToken(token);
+    return this.usersService.readBasic(userInfo.id, nik);
   }
 }
