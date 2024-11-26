@@ -184,7 +184,7 @@ export class UsersService implements OnApplicationBootstrap {
       .select([
         'COUNT(CASE WHEN userGame.owned = true THEN 1 END) as ownedGames',
         'COUNT(CASE WHEN userGame.wished = true THEN 1 END) as wishedGames',
-        'COUNT(*) as totalGames',
+        'COUNT(userGame.id) as totalGames',
       ])
       .getRawOne();
 
@@ -538,7 +538,7 @@ export class UsersService implements OnApplicationBootstrap {
       relations: ['sender', 'receiver'],
     });
 
-    return friendships.map((friendship) => {
+    const friends = friendships.map((friendship) => {
       const friend =
         friendship.sender.id === userId
           ? friendship.receiver
@@ -549,8 +549,17 @@ export class UsersService implements OnApplicationBootstrap {
         nik: friend.nik,
         avatarPath: friend.avatarPath,
         isOnline: friend.isOnline,
-        lastSeen: friend.lastSeen,
+        lastSeen: friend.lastSeen || new Date(0),
       };
+    });
+
+    // Ordenar: primero los online, luego por última conexión
+    return friends.sort((a, b) => {
+      if (a.isOnline && !b.isOnline) return -1;
+      if (!a.isOnline && b.isOnline) return 1;
+      const aTime = a.lastSeen?.getTime() || 0;
+      const bTime = b.lastSeen?.getTime() || 0;
+      return bTime - aTime;
     });
   }
 
@@ -803,11 +812,14 @@ export class UsersService implements OnApplicationBootstrap {
       }
     }
 
-    // Ordenar por fecha del último mensaje
-    return conversationPreviews.sort(
-      (a, b) =>
-        b.lastMessage.createdAt.getTime() - a.lastMessage.createdAt.getTime(),
-    );
+    // Modificar el orden: primero por estado online, luego por último mensaje
+    return conversationPreviews.sort((a, b) => {
+      if (a.friend.isOnline && !b.friend.isOnline) return -1;
+      if (!a.friend.isOnline && b.friend.isOnline) return 1;
+      const aTime = a.friend.lastSeen?.getTime() || 0;
+      const bTime = b.friend.lastSeen?.getTime() || 0;
+      return bTime - aTime;
+    });
   }
 
   async readBasic(userId: number, nikFilter?: string): Promise<UserBasic[]> {
@@ -821,6 +833,25 @@ export class UsersService implements OnApplicationBootstrap {
       })
       .andWhere('isOnline = :isOnline', { isOnline: true })
       .execute();
+
+    // Obtener todas las amistades (aceptadas y pendientes)
+    const friendships = await this.friendshipsRepository.find({
+      where: [{ sender: { id: userId } }, { receiver: { id: userId } }],
+      relations: ['sender', 'receiver'],
+    });
+
+    // Crear Sets para búsqueda eficiente
+    const friendIds = new Set(
+      friendships
+        .filter((f) => f.status === FriendshipStatus.ACCEPTED)
+        .map((f) => (f.sender.id === userId ? f.receiver.id : f.sender.id)),
+    );
+
+    const pendingRequestIds = new Set(
+      friendships
+        .filter((f) => f.status === FriendshipStatus.PENDING)
+        .map((f) => (f.sender.id === userId ? f.receiver.id : f.sender.id)),
+    );
 
     // Luego creamos el query builder
     const queryBuilder = this.usersRepository
@@ -841,33 +872,10 @@ export class UsersService implements OnApplicationBootstrap {
       });
     }
 
-    const users = await queryBuilder.limit(10).getMany();
+    const users = await queryBuilder.getMany();
 
-    // Obtener todas las amistades (aceptadas y pendientes)
-    const friendships = await this.friendshipsRepository.find({
-      where: [{ sender: { id: userId } }, { receiver: { id: userId } }],
-      relations: ['sender', 'receiver'],
-    });
-
-    // Crear Sets para búsqueda eficiente
-    const friendIds = new Set(
-      friendships
-        .filter((f) => f.status === FriendshipStatus.ACCEPTED)
-        .map((f) => (f.sender.id === userId ? f.receiver.id : f.sender.id)),
-    );
-
-    const pendingRequestIds = new Set(
-      friendships
-        .filter((f) => f.status === FriendshipStatus.PENDING)
-        .map((f) => {
-          // Si el usuario actual es el sender, el request está pendiente para el receiver
-          // Si el usuario actual es el receiver, el request está pendiente para el sender
-          return f.sender.id === userId ? f.receiver.id : f.sender.id;
-        }),
-    );
-
-    // Mapear resultados incluyendo ambos estados
-    return users.map((user) => ({
+    // Mapear y ordenar resultados
+    const mappedUsers = users.map((user) => ({
       id: user.id,
       nik: user.nik,
       avatarPath: user.avatarPath,
@@ -876,5 +884,14 @@ export class UsersService implements OnApplicationBootstrap {
       isOnline: user.isOnline,
       lastSeen: user.lastSeen,
     }));
+
+    // Ordenar: primero los online, luego por última conexión
+    return mappedUsers.sort((a, b) => {
+      if (a.isOnline && !b.isOnline) return -1;
+      if (!a.isOnline && b.isOnline) return 1;
+      const aTime = a.lastSeen?.getTime() || 0;
+      const bTime = b.lastSeen?.getTime() || 0;
+      return bTime - aTime;
+    });
   }
 }
