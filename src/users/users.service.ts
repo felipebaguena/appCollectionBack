@@ -94,11 +94,30 @@ export class UsersService implements OnApplicationBootstrap {
   }
 
   async findOneByEmail(email: string): Promise<User | undefined> {
-    return this.usersRepository.findOne({
+    const user = await this.usersRepository.findOne({
       where: { email },
       relations: ['role'],
-      select: ['id', 'name', 'nik', 'email', 'password', 'role', 'avatarPath'],
+      select: [
+        'id',
+        'name',
+        'nik',
+        'email',
+        'password',
+        'role',
+        'avatarPath',
+        'isOnline',
+        'lastSeen',
+      ],
     });
+
+    // Actualizar estado online y última conexión si el usuario existe
+    if (user) {
+      user.isOnline = true;
+      user.lastSeen = new Date();
+      await this.usersRepository.save(user);
+    }
+
+    return user;
   }
 
   async getUserInfoFromToken(
@@ -507,6 +526,8 @@ export class UsersService implements OnApplicationBootstrap {
       name: string;
       nik: string;
       avatarPath?: string;
+      isOnline: boolean;
+      lastSeen: Date;
     }[]
   > {
     const friendships = await this.friendshipsRepository.find({
@@ -527,6 +548,8 @@ export class UsersService implements OnApplicationBootstrap {
         name: friend.name,
         nik: friend.nik,
         avatarPath: friend.avatarPath,
+        isOnline: friend.isOnline,
+        lastSeen: friend.lastSeen,
       };
     });
   }
@@ -582,7 +605,7 @@ export class UsersService implements OnApplicationBootstrap {
     // Obtener información básica del amigo
     const friend = await this.usersRepository.findOne({
       where: { id: friendId },
-      select: ['id', 'nik', 'avatarPath'],
+      select: ['id', 'nik', 'avatarPath', 'isOnline', 'lastSeen'],
     });
 
     if (!friend) {
@@ -597,6 +620,8 @@ export class UsersService implements OnApplicationBootstrap {
       id: friend.id,
       nik: friend.nik,
       avatarPath: friend.avatarPath,
+      isOnline: friend.isOnline,
+      lastSeen: friend.lastSeen,
       friendsSince: friendship.createdAt,
       profileStats,
       yearlyStats,
@@ -748,7 +773,7 @@ export class UsersService implements OnApplicationBootstrap {
     for (const conv of conversations) {
       const friend = await this.usersRepository.findOne({
         where: { id: conv.friendId },
-        select: ['id', 'name', 'nik', 'avatarPath'],
+        select: ['id', 'name', 'nik', 'avatarPath', 'isOnline', 'lastSeen'],
       });
 
       const lastMessage = await this.messagesRepository.findOne({
@@ -763,6 +788,8 @@ export class UsersService implements OnApplicationBootstrap {
             name: friend.name,
             nik: friend.nik,
             avatarPath: friend.avatarPath,
+            isOnline: friend.isOnline,
+            lastSeen: friend.lastSeen,
           },
           lastMessage: {
             id: lastMessage.id,

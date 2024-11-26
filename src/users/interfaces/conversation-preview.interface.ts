@@ -4,6 +4,8 @@ export interface ConversationPreview {
     name: string;
     nik: string;
     avatarPath?: string;
+    isOnline: boolean;
+    lastSeen: Date;
   };
   lastMessage: {
     id: number;
