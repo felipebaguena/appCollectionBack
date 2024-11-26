@@ -1,6 +1,10 @@
-import { Injectable, UnauthorizedException } from '@nestjs/common';
+import {
+  Injectable,
+  UnauthorizedException,
+  OnApplicationBootstrap,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, Not } from 'typeorm';
+import { Repository, Not, LessThan } from 'typeorm';
 import { User } from './user.entity';
 import * as bcrypt from 'bcrypt';
 import { JwtService } from '@nestjs/jwt';
@@ -17,9 +21,12 @@ import { Message } from './message.entity';
 import { MessageDto } from './interfaces/message.interface';
 import { ConversationPreview } from './interfaces/conversation-preview.interface';
 import { UserBasic } from './interfaces/user-basic.interface';
+import { Logger } from '@nestjs/common';
 
 @Injectable()
-export class UsersService {
+export class UsersService implements OnApplicationBootstrap {
+  private readonly logger = new Logger(UsersService.name);
+
   constructor(
     @InjectRepository(User)
     private usersRepository: Repository<User>,
@@ -30,6 +37,33 @@ export class UsersService {
     @InjectRepository(Message)
     private messagesRepository: Repository<Message>,
   ) {}
+
+  onApplicationBootstrap() {
+    setInterval(() => {
+      this.checkOnlineStatus();
+    }, 30000); // Revisar cada 30 segundos
+  }
+
+  private async checkOnlineStatus() {
+    const offlineThreshold = new Date(Date.now() - 60000); // 60 segundos
+
+    try {
+      await this.usersRepository
+        .createQueryBuilder()
+        .update(User)
+        .set({ isOnline: false })
+        .where('lastSeen < :threshold', { threshold: offlineThreshold })
+        .andWhere('isOnline = :isOnline', { isOnline: true })
+        .execute();
+
+      this.logger.debug('Estado online de usuarios actualizado');
+    } catch (error) {
+      this.logger.error(
+        'Error al actualizar estado online de usuarios:',
+        error,
+      );
+    }
+  }
 
   async create(user: Partial<User>): Promise<User> {
     // Verificar si el nik ya existe
@@ -653,6 +687,15 @@ export class UsersService {
   }
 
   async getUnreadMessagesCount(userId: number): Promise<number> {
+    // Actualizar estado online y última conexión
+    await this.usersRepository.update(
+      { id: userId },
+      {
+        isOnline: true,
+        lastSeen: new Date(),
+      },
+    );
+
     return this.messagesRepository.count({
       where: {
         receiver: { id: userId },
@@ -741,10 +784,27 @@ export class UsersService {
   }
 
   async readBasic(userId: number, nikFilter?: string): Promise<UserBasic[]> {
-    // Crear query builder base
+    // Actualizar estado offline de forma más precisa
+    await this.usersRepository
+      .createQueryBuilder()
+      .update(User)
+      .set({ isOnline: false })
+      .where('lastSeen < :threshold', {
+        threshold: new Date(Date.now() - 60000),
+      })
+      .andWhere('isOnline = :isOnline', { isOnline: true })
+      .execute();
+
+    // Luego creamos el query builder
     const queryBuilder = this.usersRepository
       .createQueryBuilder('user')
-      .select(['user.id', 'user.nik', 'user.avatarPath'])
+      .select([
+        'user.id',
+        'user.nik',
+        'user.avatarPath',
+        'user.isOnline',
+        'user.lastSeen',
+      ])
       .where('user.id != :userId', { userId });
 
     // Añadir filtro por nik si existe
@@ -786,6 +846,8 @@ export class UsersService {
       avatarPath: user.avatarPath,
       isFriend: friendIds.has(user.id),
       hasPendingFriendRequest: pendingRequestIds.has(user.id),
+      isOnline: user.isOnline,
+      lastSeen: user.lastSeen,
     }));
   }
 }

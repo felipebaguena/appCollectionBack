@@ -47,4 +47,10 @@ export class User {
 
   @OneToMany(() => Message, (message) => message.receiver)
   receivedMessages: Message[];
+
+  @Column({ default: false })
+  isOnline: boolean;
+
+  @Column({ type: 'timestamp', nullable: true })
+  lastSeen: Date;
 }

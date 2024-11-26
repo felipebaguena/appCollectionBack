@@ -4,4 +4,6 @@ export interface UserBasic {
   avatarPath?: string;
   isFriend: boolean;
   hasPendingFriendRequest: boolean;
+  isOnline: boolean;
+  lastSeen: Date;
 }
