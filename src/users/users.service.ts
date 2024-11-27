@@ -65,7 +65,9 @@ export class UsersService implements OnApplicationBootstrap {
     }
   }
 
-  async create(user: Partial<User>): Promise<User> {
+  async create(
+    user: Partial<User>,
+  ): Promise<{ user: User; access_token: string }> {
     // Verificar si el nik ya existe
     if (user.nik) {
       const existingUser = await this.usersRepository.findOne({
@@ -86,7 +88,20 @@ export class UsersService implements OnApplicationBootstrap {
       ...user,
       role: defaultRole,
     });
-    return this.usersRepository.save(newUser);
+
+    const savedUser = await this.usersRepository.save(newUser);
+
+    // Generar token
+    const payload = {
+      email: savedUser.email,
+      sub: savedUser.id,
+      role: defaultRole.name,
+    };
+
+    return {
+      user: savedUser,
+      access_token: this.jwtService.sign(payload),
+    };
   }
 
   async findAll(): Promise<User[]> {
