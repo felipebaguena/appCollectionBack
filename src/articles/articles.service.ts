@@ -24,6 +24,7 @@ import {
 import { Comment } from './comment.entity';
 import { User } from '../users/user.entity';
 import { CommentDto } from './interfaces/comment.interface';
+import { Friendship, FriendshipStatus } from '../users/friendship.entity';
 
 @Injectable()
 export class ArticlesService implements OnApplicationBootstrap {
@@ -48,6 +49,8 @@ export class ArticlesService implements OnApplicationBootstrap {
     private commentRepository: Repository<Comment>,
     @InjectRepository(User)
     private userRepository: Repository<User>,
+    @InjectRepository(Friendship)
+    private friendshipRepository: Repository<Friendship>,
   ) {}
 
   onApplicationBootstrap() {
@@ -893,16 +896,89 @@ export class ArticlesService implements OnApplicationBootstrap {
     return this.formatComment(await this.getCommentWithUser(comment.id));
   }
 
+  private async checkFriendshipStatus(
+    userId: number,
+    otherUserId: number,
+  ): Promise<{ isFriend: boolean; isPending: boolean }> {
+    if (!userId) return { isFriend: false, isPending: false };
+
+    const friendship = await this.friendshipRepository.findOne({
+      where: [
+        {
+          sender: { id: userId },
+          receiver: { id: otherUserId },
+        },
+        {
+          sender: { id: otherUserId },
+          receiver: { id: userId },
+        },
+      ],
+    });
+
+    if (!friendship) {
+      return { isFriend: false, isPending: false };
+    }
+
+    return {
+      isFriend: friendship.status === FriendshipStatus.ACCEPTED,
+      isPending: friendship.status === FriendshipStatus.PENDING,
+    };
+  }
+
+  private async formatComment(
+    comment: Comment,
+    currentUserId?: number,
+  ): Promise<CommentDto> {
+    const { isFriend, isPending } = await this.checkFriendshipStatus(
+      currentUserId,
+      comment.user.id,
+    );
+
+    return {
+      id: comment.id,
+      content: comment.content,
+      createdAt: comment.createdAt,
+      updatedAt: comment.updatedAt,
+      isEdited: comment.isEdited,
+      parentId: comment.parentId,
+      user: {
+        id: comment.user.id,
+        name: comment.user.name,
+        nik: comment.user.nik,
+        avatarPath: comment.user.avatarPath,
+        isFriend,
+        isPending,
+      },
+    };
+  }
+
+  private async formatCommentWithReplies(
+    comment: Comment,
+    currentUserId?: number,
+  ): Promise<CommentDto> {
+    const formattedComment = await this.formatComment(comment, currentUserId);
+
+    if (comment.replies) {
+      formattedComment.replies = await Promise.all(
+        comment.replies.map((reply) =>
+          this.formatCommentWithReplies(reply, currentUserId),
+        ),
+      );
+    }
+
+    return formattedComment;
+  }
+
   async getComments(
     articleId: number,
     page: number,
     limit: number,
+    currentUserId?: number,
   ): Promise<{
     comments: CommentDto[];
     totalItems: number;
     totalPages: number;
   }> {
-    // Obtener solo los comentarios principales
     const [mainComments, total] = await this.commentRepository.findAndCount({
       where: { articleId, parentId: null },
       relations: [
@@ -917,10 +993,14 @@ export class ArticlesService implements OnApplicationBootstrap {
       take: limit,
     });
 
-    return {
-      comments: mainComments.map((comment) =>
-        this.formatCommentWithReplies(comment),
+    const formattedComments = await Promise.all(
+      mainComments.map((comment) =>
+        this.formatCommentWithReplies(comment, currentUserId),
       ),
+    );
+
+    return {
+      comments: formattedComments,
       totalItems: total,
       totalPages: Math.ceil(total / limit),
     };
@@ -979,23 +1059,6 @@ export class ArticlesService implements OnApplicationBootstrap {
     });
   }
 
-  private formatComment(comment: Comment): CommentDto {
-    return {
-      id: comment.id,
-      content: comment.content,
-      createdAt: comment.createdAt,
-      updatedAt: comment.updatedAt,
-      isEdited: comment.isEdited,
-      parentId: comment.parentId,
-      user: {
-        id: comment.user.id,
-        name: comment.user.name,
-        nik: comment.user.nik,
-        avatarPath: comment.user.avatarPath,
-      },
-    };
-  }
-
   async addReply(
     parentCommentId: number,
     userId: number,
@@ -1028,14 +1091,5 @@ export class ArticlesService implements OnApplicationBootstrap {
     await this.commentRepository.save(reply);
 
     return this.formatComment(await this.getCommentWithUser(reply.id));
-  }
-
-  private formatCommentWithReplies(comment: Comment): CommentDto {
-    return {
-      ...this.formatComment(comment),
-      replies:
-        comment.replies?.map((reply) => this.formatCommentWithReplies(reply)) ||
-        [],
-    };
   }
 }

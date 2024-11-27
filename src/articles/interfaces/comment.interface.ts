@@ -10,6 +10,8 @@ export interface CommentDto {
     name: string;
     nik: string;
     avatarPath?: string;
+    isFriend?: boolean;
+    isPending?: boolean;
   };
   replies?: CommentDto[];
 }

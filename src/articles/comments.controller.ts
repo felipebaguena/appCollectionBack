@@ -10,9 +10,13 @@ import {
   Request,
   UseGuards,
   UnauthorizedException,
+  DefaultValuePipe,
+  ParseIntPipe,
 } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
 import { ArticlesService } from './articles.service';
+import { CommentDto } from './interfaces/comment.interface';
+import { OptionalJwtGuard } from 'src/auth/optional-jwt.guard';
 
 @Controller('articles/comments')
 export class CommentsController {
@@ -39,12 +43,19 @@ export class CommentsController {
   }
 
   @Get('article/:articleId')
+  @UseGuards(OptionalJwtGuard)
   async getComments(
     @Param('articleId') articleId: string,
-    @Query('page') page: number = 1,
-    @Query('limit') limit: number = 10,
-  ) {
-    return this.articlesService.getComments(+articleId, page, limit);
+    @Query('page', new DefaultValuePipe(1), ParseIntPipe) page: number,
+    @Query('limit', new DefaultValuePipe(10), ParseIntPipe) limit: number,
+    @Request() req,
+  ): Promise<{
+    comments: CommentDto[];
+    totalItems: number;
+    totalPages: number;
+  }> {
+    const userId = req.user?.userId;
+    return this.articlesService.getComments(+articleId, page, limit, userId);
   }
 
   @Put(':commentId')

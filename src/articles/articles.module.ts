@@ -12,6 +12,7 @@ import { ArticleTemplate } from '../article-templates/article-template.entity';
 import { ArticleImage } from '../article-images/article-image.entity';
 import { User } from '../users/user.entity';
 import { CommentsController } from './comments.controller';
+import { Friendship } from '../users/friendship.entity';
 
 @Module({
   imports: [
@@ -25,6 +26,7 @@ import { CommentsController } from './comments.controller';
       ArticleTemplate,
       ArticleImage,
       User,
+      Friendship,
     ]),
   ],
   controllers: [ArticlesController, CommentsController],
