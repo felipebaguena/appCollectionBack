@@ -66,4 +66,22 @@ export class CommentsController {
   async deleteComment(@Param('commentId') commentId: string, @Request() req) {
     return this.articlesService.deleteComment(+commentId, req.user.userId);
   }
+
+  @Post(':commentId/reply')
+  @UseGuards(AuthGuard('jwt'))
+  async replyToComment(
+    @Param('commentId') commentId: string,
+    @Body() replyData: { content: string },
+    @Request() req,
+  ) {
+    if (!req.user || !req.user.userId) {
+      throw new UnauthorizedException('Usuario no autenticado');
+    }
+
+    return this.articlesService.addReply(
+      +commentId,
+      req.user.userId,
+      replyData.content,
+    );
+  }
 }

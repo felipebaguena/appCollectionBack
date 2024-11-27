@@ -904,14 +904,27 @@ export class ArticlesService implements OnApplicationBootstrap {
   }> {
     const [comments, total] = await this.commentRepository.findAndCount({
       where: { articleId },
-      relations: ['user'],
+      relations: [
+        'user',
+        'replies',
+        'replies.user',
+        'replies.replies',
+        'replies.replies.user',
+      ],
       order: { createdAt: 'DESC' },
       skip: (page - 1) * limit,
       take: limit,
     });
 
+    // Filtrar solo los comentarios principales
+    const mainComments = comments.filter(
+      (comment) => comment.parentId === null,
+    );
+
     return {
-      comments: comments.map((comment) => this.formatComment(comment)),
+      comments: mainComments.map((comment) =>
+        this.formatCommentWithReplies(comment),
+      ),
       totalItems: total,
       totalPages: Math.ceil(total / limit),
     };
@@ -977,12 +990,56 @@ export class ArticlesService implements OnApplicationBootstrap {
       createdAt: comment.createdAt,
       updatedAt: comment.updatedAt,
       isEdited: comment.isEdited,
+      parentId: comment.parentId,
       user: {
         id: comment.user.id,
         name: comment.user.name,
         nik: comment.user.nik,
         avatarPath: comment.user.avatarPath,
       },
+    };
+  }
+
+  async addReply(
+    parentCommentId: number,
+    userId: number,
+    content: string,
+  ): Promise<CommentDto> {
+    const parentComment = await this.commentRepository.findOne({
+      where: { id: parentCommentId },
+      relations: ['article'],
+    });
+
+    if (!parentComment) {
+      throw new NotFoundException('Comentario padre no encontrado');
+    }
+
+    const user = await this.userRepository.findOne({
+      where: { id: userId },
+    });
+
+    if (!user) {
+      throw new NotFoundException('Usuario no encontrado');
+    }
+
+    const reply = this.commentRepository.create({
+      content,
+      article: parentComment.article,
+      user,
+      parent: parentComment,
+    });
+
+    await this.commentRepository.save(reply);
+
+    return this.formatComment(await this.getCommentWithUser(reply.id));
+  }
+
+  private formatCommentWithReplies(comment: Comment): CommentDto {
+    return {
+      ...this.formatComment(comment),
+      replies:
+        comment.replies?.map((reply) => this.formatCommentWithReplies(reply)) ||
+        [],
     };
   }
 }
