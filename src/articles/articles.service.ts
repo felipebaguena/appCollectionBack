@@ -948,6 +948,7 @@ export class ArticlesService implements OnApplicationBootstrap {
         avatarPath: comment.user.avatarPath,
         isFriend,
         isPending,
+        isOnline: comment.user.isOnline,
       },
     };
   }

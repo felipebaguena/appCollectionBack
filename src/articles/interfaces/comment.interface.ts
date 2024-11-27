@@ -12,6 +12,7 @@ export interface CommentDto {
     avatarPath?: string;
     isFriend?: boolean;
     isPending?: boolean;
+    isOnline?: boolean;
   };
   replies?: CommentDto[];
 }
