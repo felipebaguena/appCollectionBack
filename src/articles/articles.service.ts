@@ -902,8 +902,9 @@ export class ArticlesService implements OnApplicationBootstrap {
     totalItems: number;
     totalPages: number;
   }> {
-    const [comments, total] = await this.commentRepository.findAndCount({
-      where: { articleId },
+    // Obtener solo los comentarios principales
+    const [mainComments, total] = await this.commentRepository.findAndCount({
+      where: { articleId, parentId: null },
       relations: [
         'user',
         'replies',
@@ -915,11 +916,6 @@ export class ArticlesService implements OnApplicationBootstrap {
       skip: (page - 1) * limit,
       take: limit,
     });
-
-    // Filtrar solo los comentarios principales
-    const mainComments = comments.filter(
-      (comment) => comment.parentId === null,
-    );
 
     return {
       comments: mainComments.map((comment) =>
