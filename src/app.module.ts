@@ -31,6 +31,7 @@ import { ArticleTemplatesModule } from './article-templates/article-templates.mo
 import { ArticleTemplate } from './article-templates/article-template.entity';
 import { Friendship } from './users/friendship.entity';
 import { Message } from './users/message.entity';
+import { Comment } from './articles/comment.entity';
 
 @Module({
   imports: [
@@ -58,6 +59,7 @@ import { Message } from './users/message.entity';
         ArticleTemplate,
         Friendship,
         Message,
+        Comment,
       ],
       synchronize: true,
       logging: true,

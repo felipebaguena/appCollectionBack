@@ -4,6 +4,7 @@ import {
   NotFoundException,
   BadRequestException,
   OnApplicationBootstrap,
+  ForbiddenException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, In, Raw } from 'typeorm';
@@ -20,6 +21,9 @@ import {
   ArticleCardResponse,
   ArticlesPageResponse,
 } from './articles.interface';
+import { Comment } from './comment.entity';
+import { User } from '../users/user.entity';
+import { CommentDto } from './interfaces/comment.interface';
 
 @Injectable()
 export class ArticlesService implements OnApplicationBootstrap {
@@ -40,6 +44,10 @@ export class ArticlesService implements OnApplicationBootstrap {
     private templateRepository: Repository<ArticleTemplate>,
     @InjectRepository(ArticleImage)
     private articleImageRepository: Repository<ArticleImage>,
+    @InjectRepository(Comment)
+    private commentRepository: Repository<Comment>,
+    @InjectRepository(User)
+    private userRepository: Repository<User>,
   ) {}
 
   onApplicationBootstrap() {
@@ -849,6 +857,131 @@ export class ArticlesService implements OnApplicationBootstrap {
         data: archivedArticles.map(transformArticle),
         totalItems,
         totalPages: Math.ceil(totalItems / limit),
+      },
+    };
+  }
+
+  async addComment(
+    articleId: number,
+    userId: number,
+    content: string,
+  ): Promise<CommentDto> {
+    const article = await this.articleRepository.findOne({
+      where: { id: articleId },
+    });
+
+    if (!article) {
+      throw new NotFoundException('Artículo no encontrado');
+    }
+
+    const user = await this.userRepository.findOne({
+      where: { id: userId },
+    });
+
+    if (!user) {
+      throw new NotFoundException('Usuario no encontrado');
+    }
+
+    const comment = this.commentRepository.create({
+      content,
+      article,
+      user,
+    });
+
+    await this.commentRepository.save(comment);
+
+    return this.formatComment(await this.getCommentWithUser(comment.id));
+  }
+
+  async getComments(
+    articleId: number,
+    page: number,
+    limit: number,
+  ): Promise<{
+    comments: CommentDto[];
+    totalItems: number;
+    totalPages: number;
+  }> {
+    const [comments, total] = await this.commentRepository.findAndCount({
+      where: { articleId },
+      relations: ['user'],
+      order: { createdAt: 'DESC' },
+      skip: (page - 1) * limit,
+      take: limit,
+    });
+
+    return {
+      comments: comments.map((comment) => this.formatComment(comment)),
+      totalItems: total,
+      totalPages: Math.ceil(total / limit),
+    };
+  }
+
+  async updateComment(
+    commentId: number,
+    userId: number,
+    content: string,
+  ): Promise<CommentDto> {
+    const comment = await this.commentRepository.findOne({
+      where: { id: commentId },
+      relations: ['user'],
+    });
+
+    if (!comment) {
+      throw new NotFoundException('Comentario no encontrado');
+    }
+
+    if (comment.user.id !== userId) {
+      throw new ForbiddenException(
+        'No tienes permiso para editar este comentario',
+      );
+    }
+
+    comment.content = content;
+    comment.isEdited = true;
+
+    const updatedComment = await this.commentRepository.save(comment);
+    return this.formatComment(updatedComment);
+  }
+
+  async deleteComment(commentId: number, userId: number): Promise<void> {
+    const comment = await this.commentRepository.findOne({
+      where: { id: commentId },
+      relations: ['user'],
+    });
+
+    if (!comment) {
+      throw new NotFoundException('Comentario no encontrado');
+    }
+
+    if (comment.user.id !== userId) {
+      throw new ForbiddenException(
+        'No tienes permiso para eliminar este comentario',
+      );
+    }
+
+    await this.commentRepository.remove(comment);
+  }
+
+  private async getCommentWithUser(commentId: number): Promise<Comment> {
+    return this.commentRepository.findOne({
+      where: { id: commentId },
+      relations: ['user'],
+    });
+  }
+
+  private formatComment(comment: Comment): CommentDto {
+    return {
+      id: comment.id,
+      content: comment.content,
+      createdAt: comment.createdAt,
+      updatedAt: comment.updatedAt,
+      isEdited: comment.isEdited,
+      user: {
+        id: comment.user.id,
+        name: comment.user.name,
+        nik: comment.user.nik,
+        avatarPath: comment.user.avatarPath,
       },
     };
   }

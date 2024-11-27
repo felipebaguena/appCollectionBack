@@ -9,6 +9,7 @@ import { Role } from '../roles/role.entity';
 import { UserGame } from '../user-games/user-game.entity';
 import { Friendship } from './friendship.entity';
 import { Message } from './message.entity';
+import { Comment } from '../articles/comment.entity';
 
 @Entity()
 export class User {
@@ -53,4 +54,7 @@ export class User {
 
   @Column({ type: 'timestamp', nullable: true })
   lastSeen: Date;
+
+  @OneToMany(() => Comment, (comment) => comment.user)
+  comments: Comment[];
 }

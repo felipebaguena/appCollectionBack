@@ -14,6 +14,7 @@ import { Genre } from '../genres/genre.entity';
 import { Developer } from '../developers/developer.entity';
 import { ArticleImage } from '../article-images/article-image.entity';
 import { ArticleTemplate } from '../article-templates/article-template.entity';
+import { Comment } from './comment.entity';
 
 @Entity()
 export class Article {
@@ -87,4 +88,7 @@ export class Article {
 
   @Column({ type: 'timestamp', nullable: true })
   scheduledPublishAt: Date;
+
+  @OneToMany(() => Comment, (comment) => comment.article)
+  comments: Comment[];
 }
