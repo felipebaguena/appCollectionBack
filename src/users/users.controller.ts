@@ -186,7 +186,9 @@ export class UsersController {
 
   @UseGuards(AuthGuard('jwt'))
   @Get('me/messages/unread-count')
-  async getUnreadMessagesCount(@Request() req) {
+  async getUnreadMessagesCount(
+    @Request() req,
+  ): Promise<{ unreadChats: number }> {
     const token = req.headers.authorization.split(' ')[1];
     const userInfo = await this.usersService.getUserInfoFromToken(token);
     return this.usersService.getUnreadMessagesCount(userInfo.id);

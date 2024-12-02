@@ -735,7 +735,9 @@ export class UsersService implements OnApplicationBootstrap {
     return messages.map((msg) => this.formatMessage(msg));
   }
 
-  async getUnreadMessagesCount(userId: number): Promise<number> {
+  async getUnreadMessagesCount(
+    userId: number,
+  ): Promise<{ unreadChats: number }> {
     // Actualizar estado online y última conexión
     await this.usersRepository.update(
       { id: userId },
@@ -745,12 +747,14 @@ export class UsersService implements OnApplicationBootstrap {
       },
     );
 
-    return this.messagesRepository.count({
+    const count = await this.messagesRepository.count({
       where: {
         receiver: { id: userId },
         read: false,
       },
     });
+
+    return { unreadChats: count };
   }
 
   private formatMessage(message: Message): MessageDto {
