@@ -49,4 +49,7 @@ export class Comment {
 
   @OneToMany(() => Comment, (comment) => comment.parent)
   replies: Comment[];
+
+  @Column({ default: false })
+  read: boolean;
 }

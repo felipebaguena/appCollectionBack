@@ -18,12 +18,16 @@ import { RolesGuard } from '../guards/roles.guard';
 import { Roles } from '../guards/roles.decorator';
 import { PublishedStatus } from './articles.enum';
 import { ArticlesPageResponse } from './articles.interface';
+import { UsersService } from '../users/users.service';
 
 @Controller('articles')
 export class ArticlesController {
   private readonly logger = new Logger(ArticlesController.name);
 
-  constructor(private readonly articlesService: ArticlesService) {}
+  constructor(
+    private readonly articlesService: ArticlesService,
+    private readonly usersService: UsersService,
+  ) {}
 
   @Post()
   @UseGuards(AuthGuard('jwt'), RolesGuard)
@@ -199,5 +203,35 @@ export class ArticlesController {
     },
   ) {
     return this.articlesService.getArticlesForDataTable(body);
+  }
+
+  @UseGuards(AuthGuard('jwt'))
+  @Put('comments/:commentId/read')
+  async markCommentAsRead(
+    @Param('commentId') commentId: number,
+    @Request() req,
+  ): Promise<void> {
+    await this.articlesService.markCommentAsRead(commentId);
+  }
+
+  @UseGuards(AuthGuard('jwt'))
+  @Get('comments/:commentId/replies')
+  async getCommentReplies(
+    @Query('page') page: number = 1,
+    @Query('limit') limit: number = 10,
+    @Request() req,
+  ): Promise<{
+    article: { id: number; title: string };
+    replies: {
+      id: number;
+      content: string;
+      user: { id: number; name: string; nik: string; avatarPath: string };
+    }[];
+    totalItems: number;
+    totalPages: number;
+  }> {
+    const token = req.headers.authorization.split(' ')[1];
+    const userInfo = await this.usersService.getUserInfoFromToken(token);
+    return this.articlesService.getCommentReplies(userInfo.id, page, limit);
   }
 }

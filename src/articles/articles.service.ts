@@ -1093,4 +1093,66 @@ export class ArticlesService implements OnApplicationBootstrap {
 
     return this.formatComment(await this.getCommentWithUser(reply.id));
   }
+
+  async markCommentAsRead(commentId: number): Promise<void> {
+    await this.commentRepository.update({ id: commentId }, { read: true });
+  }
+
+  async getCommentReplies(
+    userId: number,
+    page: number,
+    limit: number,
+  ): Promise<{
+    article: { id: number; title: string };
+    replies: {
+      id: number;
+      content: string;
+      user: { id: number; name: string; nik: string; avatarPath: string };
+    }[];
+    totalItems: number;
+    totalPages: number;
+  }> {
+    const [replies, totalItems] = await this.commentRepository
+      .createQueryBuilder('comment')
+      .innerJoin(
+        'comment.parent',
+        'parentComment',
+        'parentComment.userId = :userId',
+        { userId },
+      )
+      .leftJoinAndSelect('comment.user', 'user')
+      .leftJoinAndSelect('comment.article', 'article')
+      .orderBy('comment.createdAt', 'DESC')
+      .skip((page - 1) * limit)
+      .take(limit)
+      .getManyAndCount();
+
+    if (replies.length === 0) {
+      return {
+        article: null,
+        replies: [],
+        totalItems: 0,
+        totalPages: 0,
+      };
+    }
+
+    return {
+      article: {
+        id: replies[0].article.id,
+        title: replies[0].article.title,
+      },
+      replies: replies.map((reply) => ({
+        id: reply.id,
+        content: reply.content,
+        user: {
+          id: reply.user.id,
+          name: reply.user.name,
+          nik: reply.user.nik,
+          avatarPath: reply.user.avatarPath,
+        },
+      })),
+      totalItems,
+      totalPages: Math.ceil(totalItems / limit),
+    };
+  }
 }

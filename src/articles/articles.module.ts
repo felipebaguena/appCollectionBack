@@ -13,6 +13,7 @@ import { ArticleImage } from '../article-images/article-image.entity';
 import { User } from '../users/user.entity';
 import { CommentsController } from './comments.controller';
 import { Friendship } from '../users/friendship.entity';
+import { UsersModule } from '../users/users.module';
 
 @Module({
   imports: [
@@ -28,6 +29,7 @@ import { Friendship } from '../users/friendship.entity';
       User,
       Friendship,
     ]),
+    UsersModule,
   ],
   controllers: [ArticlesController, CommentsController],
   providers: [ArticlesService],

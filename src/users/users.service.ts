@@ -22,6 +22,7 @@ import { MessageDto } from './interfaces/message.interface';
 import { ConversationPreview } from './interfaces/conversation-preview.interface';
 import { UserBasic } from './interfaces/user-basic.interface';
 import { Logger } from '@nestjs/common';
+import { Comment } from 'src/articles/comment.entity';
 
 @Injectable()
 export class UsersService implements OnApplicationBootstrap {
@@ -36,6 +37,8 @@ export class UsersService implements OnApplicationBootstrap {
     private rolesService: RolesService,
     @InjectRepository(Message)
     private messagesRepository: Repository<Message>,
+    @InjectRepository(Comment)
+    private commentRepository: Repository<Comment>,
   ) {}
 
   onApplicationBootstrap() {
@@ -737,7 +740,7 @@ export class UsersService implements OnApplicationBootstrap {
 
   async getUnreadMessagesCount(
     userId: number,
-  ): Promise<{ unreadChats: number }> {
+  ): Promise<{ unreadChats: number; unreadComments: boolean }> {
     // Actualizar estado online y última conexión
     await this.usersRepository.update(
       { id: userId },
@@ -747,14 +750,27 @@ export class UsersService implements OnApplicationBootstrap {
       },
     );
 
-    const count = await this.messagesRepository.count({
+    // Obtener mensajes no leídos
+    const unreadChatsCount = await this.messagesRepository.count({
       where: {
         receiver: { id: userId },
         read: false,
       },
     });
 
-    return { unreadChats: count };
+    // Obtener comentarios no leídos (respuestas a tus comentarios)
+    const hasUnreadComments =
+      (await this.commentRepository
+        .createQueryBuilder('comment')
+        .innerJoin('comment.parent', 'parentComment')
+        .where('parentComment.userId = :userId', { userId })
+        .andWhere('comment.read = :read', { read: false })
+        .getCount()) > 0;
+
+    return {
+      unreadChats: unreadChatsCount,
+      unreadComments: hasUnreadComments,
+    };
   }
 
   private formatMessage(message: Message): MessageDto {
@@ -912,5 +928,63 @@ export class UsersService implements OnApplicationBootstrap {
       const bTime = b.lastSeen?.getTime() || 0;
       return bTime - aTime;
     });
+  }
+
+  async getCommentReplies(
+    userId: number,
+    page: number,
+    limit: number,
+  ): Promise<{
+    article: { id: number; title: string };
+    replies: {
+      id: number;
+      content: string;
+      user: { id: number; name: string; nik: string; avatarPath: string };
+    }[];
+    totalItems: number;
+    totalPages: number;
+  }> {
+    const [replies, totalItems] = await this.commentRepository
+      .createQueryBuilder('comment')
+      .innerJoin(
+        'comment.parent',
+        'parentComment',
+        'parentComment.userId = :userId',
+        { userId },
+      )
+      .leftJoinAndSelect('comment.user', 'user')
+      .leftJoinAndSelect('comment.article', 'article')
+      .orderBy('comment.createdAt', 'DESC')
+      .skip((page - 1) * limit)
+      .take(limit)
+      .getManyAndCount();
+
+    if (replies.length === 0) {
+      return {
+        article: null,
+        replies: [],
+        totalItems: 0,
+        totalPages: 0,
+      };
+    }
+
+    return {
+      article: {
+        id: replies[0].article.id,
+        title: replies[0].article.title,
+      },
+      replies: replies.map((reply) => ({
+        id: reply.id,
+        content: reply.content,
+        user: {
+          id: reply.user.id,
+          name: reply.user.name,
+          nik: reply.user.nik,
+          avatarPath: reply.user.avatarPath,
+        },
+      })),
+      totalItems,
+      totalPages: Math.ceil(totalItems / limit),
+    };
   }
 }

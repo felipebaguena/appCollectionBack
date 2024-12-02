@@ -188,7 +188,7 @@ export class UsersController {
   @Get('me/messages/unread-count')
   async getUnreadMessagesCount(
     @Request() req,
-  ): Promise<{ unreadChats: number }> {
+  ): Promise<{ unreadChats: number; unreadComments: boolean }> {
     const token = req.headers.authorization.split(' ')[1];
     const userInfo = await this.usersService.getUserInfoFromToken(token);
     return this.usersService.getUnreadMessagesCount(userInfo.id);
@@ -211,5 +211,26 @@ export class UsersController {
     const token = req.headers.authorization.split(' ')[1];
     const userInfo = await this.usersService.getUserInfoFromToken(token);
     return this.usersService.readBasic(userInfo.id, nik);
+  }
+
+  @UseGuards(AuthGuard('jwt'))
+  @Get('me/comments/replies')
+  async getCommentReplies(
+    @Query('page') page: number = 1,
+    @Query('limit') limit: number = 10,
+    @Request() req,
+  ): Promise<{
+    article: { id: number; title: string };
+    replies: {
+      id: number;
+      content: string;
+      user: { id: number; name: string; nik: string; avatarPath: string };
+    }[];
+    totalItems: number;
+    totalPages: number;
+  }> {
+    const token = req.headers.authorization.split(' ')[1];
+    const userInfo = await this.usersService.getUserInfoFromToken(token);
+    return this.usersService.getCommentReplies(userInfo.id, page, limit);
   }
 }
