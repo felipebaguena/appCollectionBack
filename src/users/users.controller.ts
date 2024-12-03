@@ -224,6 +224,8 @@ export class UsersController {
     replies: {
       id: number;
       content: string;
+      createdAt: Date;
+      read: boolean;
       user: { id: number; name: string; nik: string; avatarPath: string };
     }[];
     totalItems: number;

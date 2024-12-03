@@ -940,6 +940,7 @@ export class UsersService implements OnApplicationBootstrap {
       id: number;
       content: string;
       createdAt: Date;
+      read: boolean;
       user: { id: number; name: string; nik: string; avatarPath: string };
     }[];
     totalItems: number;
@@ -978,6 +979,7 @@ export class UsersService implements OnApplicationBootstrap {
         id: reply.id,
         content: reply.content,
         createdAt: reply.createdAt,
+        read: reply.read,
         user: {
           id: reply.user.id,
           name: reply.user.name,
