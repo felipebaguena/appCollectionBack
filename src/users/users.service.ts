@@ -939,6 +939,7 @@ export class UsersService implements OnApplicationBootstrap {
     replies: {
       id: number;
       content: string;
+      createdAt: Date;
       user: { id: number; name: string; nik: string; avatarPath: string };
     }[];
     totalItems: number;
@@ -976,6 +977,7 @@ export class UsersService implements OnApplicationBootstrap {
       replies: replies.map((reply) => ({
         id: reply.id,
         content: reply.content,
+        createdAt: reply.createdAt,
         user: {
           id: reply.user.id,
           name: reply.user.name,

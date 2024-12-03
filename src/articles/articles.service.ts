@@ -899,8 +899,8 @@ export class ArticlesService implements OnApplicationBootstrap {
   private async checkFriendshipStatus(
     userId: number,
     otherUserId: number,
-  ): Promise<{ isFriend: boolean; isPending: boolean }> {
-    if (!userId) return { isFriend: false, isPending: false };
+  ): Promise<boolean> {
+    if (!userId) return false;
 
     const friendship = await this.friendshipRepository.findOne({
       where: [
@@ -916,23 +916,26 @@ export class ArticlesService implements OnApplicationBootstrap {
     });
 
     if (!friendship) {
-      return { isFriend: false, isPending: false };
+      return false;
     }
 
-    return {
-      isFriend: friendship.status === FriendshipStatus.ACCEPTED,
-      isPending: friendship.status === FriendshipStatus.PENDING,
-    };
+    return friendship.status === FriendshipStatus.ACCEPTED;
   }
 
   private async formatComment(
     comment: Comment,
     currentUserId?: number,
   ): Promise<CommentDto> {
-    const { isFriend, isPending } = await this.checkFriendshipStatus(
-      currentUserId,
-      comment.user.id,
-    );
+    const isFriend = currentUserId
+      ? await this.checkFriendshipStatus(currentUserId, comment.user.id)
+      : false;
+    const isPending = currentUserId
+      ? await this.checkPendingFriendship(currentUserId, comment.user.id)
+      : false;
+
+    // Verificamos si es una respuesta y si el comentario padre pertenece al usuario actual
+    const isReplyToCurrentUser =
+      comment.parentId && comment.parent?.userId === currentUserId;
 
     return {
       id: comment.id,
@@ -941,6 +944,7 @@ export class ArticlesService implements OnApplicationBootstrap {
       updatedAt: comment.updatedAt,
       isEdited: comment.isEdited,
       parentId: comment.parentId,
+      ...(isReplyToCurrentUser && { read: comment.read }),
       user: {
         id: comment.user.id,
         name: comment.user.name,
@@ -986,6 +990,7 @@ export class ArticlesService implements OnApplicationBootstrap {
         'user',
         'replies',
         'replies.user',
+        'replies.parent',
         'replies.replies',
         'replies.replies.user',
       ],
@@ -1154,5 +1159,29 @@ export class ArticlesService implements OnApplicationBootstrap {
       totalItems,
       totalPages: Math.ceil(totalItems / limit),
     };
+  }
+
+  private async checkPendingFriendship(
+    userId: number,
+    otherUserId: number,
+  ): Promise<boolean> {
+    if (!userId) return false;
+
+    const friendship = await this.friendshipRepository.findOne({
+      where: [
+        {
+          sender: { id: userId },
+          receiver: { id: otherUserId },
+          status: FriendshipStatus.PENDING,
+        },
+        {
+          sender: { id: otherUserId },
+          receiver: { id: userId },
+          status: FriendshipStatus.PENDING,
+        },
+      ],
+    });
+
+    return !!friendship;
   }
 }

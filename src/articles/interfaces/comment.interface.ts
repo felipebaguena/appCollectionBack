@@ -5,6 +5,7 @@ export interface CommentDto {
   updatedAt: Date;
   isEdited: boolean;
   parentId: number | null;
+  read: boolean;
   user: {
     id: number;
     name: string;
