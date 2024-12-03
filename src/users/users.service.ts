@@ -935,13 +935,16 @@ export class UsersService implements OnApplicationBootstrap {
     page: number,
     limit: number,
   ): Promise<{
-    article: { id: number; title: string };
-    replies: {
+    articles: {
       id: number;
-      content: string;
-      createdAt: Date;
-      read: boolean;
-      user: { id: number; name: string; nik: string; avatarPath: string };
+      title: string;
+      replies: {
+        id: number;
+        content: string;
+        createdAt: Date;
+        read: boolean;
+        user: { id: number; name: string; nik: string; avatarPath: string };
+      }[];
     }[];
     totalItems: number;
     totalPages: number;
@@ -961,21 +964,21 @@ export class UsersService implements OnApplicationBootstrap {
       .take(limit)
       .getManyAndCount();
 
-    if (replies.length === 0) {
-      return {
-        article: null,
-        replies: [],
-        totalItems: 0,
-        totalPages: 0,
-      };
-    }
+    const articlesMap = new Map<
+      number,
+      { id: number; title: string; replies: any[] }
+    >();
 
-    return {
-      article: {
-        id: replies[0].article.id,
-        title: replies[0].article.title,
-      },
-      replies: replies.map((reply) => ({
+    replies.forEach((reply) => {
+      const articleId = reply.article.id;
+      if (!articlesMap.has(articleId)) {
+        articlesMap.set(articleId, {
+          id: articleId,
+          title: reply.article.title,
+          replies: [],
+        });
+      }
+      articlesMap.get(articleId).replies.push({
         id: reply.id,
         content: reply.content,
         createdAt: reply.createdAt,
@@ -986,7 +989,11 @@ export class UsersService implements OnApplicationBootstrap {
           nik: reply.user.nik,
           avatarPath: reply.user.avatarPath,
         },
-      })),
+      });
+    });
+
+    return {
+      articles: Array.from(articlesMap.values()),
       totalItems,
       totalPages: Math.ceil(totalItems / limit),
     };

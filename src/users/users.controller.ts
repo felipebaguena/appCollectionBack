@@ -220,13 +220,16 @@ export class UsersController {
     @Query('limit') limit: number = 10,
     @Request() req,
   ): Promise<{
-    article: { id: number; title: string };
-    replies: {
+    articles: {
       id: number;
-      content: string;
-      createdAt: Date;
-      read: boolean;
-      user: { id: number; name: string; nik: string; avatarPath: string };
+      title: string;
+      replies: {
+        id: number;
+        content: string;
+        createdAt: Date;
+        read: boolean;
+        user: { id: number; name: string; nik: string; avatarPath: string };
+      }[];
     }[];
     totalItems: number;
     totalPages: number;
